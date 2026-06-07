@@ -1,6 +1,10 @@
+import { useNavigate, useParams } from 'react-router-dom';
 import { useTournamentStore } from '../../store';
 
 export default function AssignmentsBoard() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  
   const participants = useTournamentStore(state => state.getOrderedParticipants());
   const assignments = useTournamentStore(state => state.getAssignmentsForCurrentSession());
   const teams = useTournamentStore(state => state.teams);
@@ -23,14 +27,28 @@ export default function AssignmentsBoard() {
 
   return (
     <div>
-      <div className="flex justify-between items-end mb-6">
+      <div className="flex justify-between items-end mb-2">
         <h2 className="text-2xl font-heading font-bold">Tablero de Asignaciones</h2>
-        {currentSession?.status === 'draw_completed' && (
-          <span className="bg-[var(--color-success)] text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-            Sorteo completado
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          {currentSession?.status === 'draw_completed' && (
+            <span className="bg-[var(--color-success)] text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+              Sorteo completado
+            </span>
+          )}
+          {currentSession && currentSession.status !== 'draw_completed' && id && (
+            <button 
+              onClick={() => navigate(`/municipal/${id}/ruleta`)}
+              className="bg-[var(--color-primary)] text-white px-4 py-1.5 rounded-[2px] text-sm font-medium hover:bg-opacity-90 transition-opacity"
+            >
+              Volver a Ruleta
+            </button>
+          )}
+        </div>
       </div>
+      
+      <p className="text-xs text-[var(--color-muted)] mb-6 italic">
+        ℹ️ Datos guardados localmente en este navegador.
+      </p>
 
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 flex flex-col items-center">

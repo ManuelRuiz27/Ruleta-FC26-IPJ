@@ -26,6 +26,16 @@ export default function RouletteScreen() {
   const [spinRotation, setSpinRotation] = useState(0);
   const [lastAssignedTeam, setLastAssignedTeam] = useState<Team | null>(null);
   const [lastAssignedParticipant, setLastAssignedParticipant] = useState<typeof currentParticipant>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const clearLocalTournamentState = useTournamentStore(state => state.clearLocalTournamentState);
+
+  const handleReset = () => {
+    if (window.confirm('¿Estás seguro de reiniciar la sesión local? Se perderán todos los participantes y asignaciones actuales.')) {
+      clearLocalTournamentState();
+      navigate(`/municipal/${id}/registro`);
+    }
+  };
 
   if (!currentSession || orderedParticipants.length === 0) {
     return (
@@ -47,12 +57,20 @@ export default function RouletteScreen() {
       <div className="h-full flex flex-col items-center justify-center">
         <h2 className="text-3xl font-heading font-bold mb-2">Mundial FC 26</h2>
         <p className="text-[var(--color-muted)] mb-8">Sesión lista para iniciar: {currentSession.name}</p>
-        <button 
-          onClick={() => startDraw()}
-          className="bg-[var(--color-primary)] text-white px-8 py-3 rounded-[2px] font-bold text-lg hover:bg-opacity-90 transition-opacity"
-        >
-          Iniciar sorteo
-        </button>
+        <div className="flex gap-4 flex-col items-center">
+          <button 
+            onClick={() => startDraw()}
+            className="bg-[var(--color-primary)] text-white px-8 py-3 rounded-[2px] font-bold text-lg hover:bg-opacity-90 transition-opacity"
+          >
+            Iniciar sorteo
+          </button>
+          <button 
+            onClick={handleReset}
+            className="text-[var(--color-muted)] text-sm underline hover:text-[var(--color-danger)] transition-colors mt-4"
+          >
+            Reiniciar sesión local
+          </button>
+        </div>
       </div>
     );
   }
@@ -71,18 +89,26 @@ export default function RouletteScreen() {
           </div>
         )}
 
-        <div className="flex gap-4">
+        <div className="flex gap-4 flex-col items-center">
+          <div className="flex gap-4">
+            <button 
+              onClick={() => navigate(`/municipal/${id}/asignaciones`)}
+              className="bg-transparent border border-[var(--color-border)] text-[var(--color-text)] px-6 py-2 rounded-[2px] font-medium hover:bg-[#3f4959] transition-colors"
+            >
+              Ver Asignaciones
+            </button>
+            <button 
+              disabled
+              className="bg-[#3f4959] text-[var(--color-muted)] px-6 py-2 rounded-[2px] font-medium cursor-not-allowed border border-[var(--color-border)]"
+            >
+              Generar Bracket (Próximamente)
+            </button>
+          </div>
           <button 
-            onClick={() => navigate(`/municipal/${id}/asignaciones`)}
-            className="bg-transparent border border-[var(--color-border)] text-[var(--color-text)] px-6 py-2 rounded-[2px] font-medium hover:bg-[#3f4959] transition-colors"
+            onClick={handleReset}
+            className="text-[var(--color-muted)] text-sm underline hover:text-[var(--color-danger)] transition-colors mt-8"
           >
-            Ver Asignaciones
-          </button>
-          <button 
-            disabled
-            className="bg-[#3f4959] text-[var(--color-muted)] px-6 py-2 rounded-[2px] font-medium cursor-not-allowed border border-[var(--color-border)]"
-          >
-            Generar Bracket (Próximamente)
+            Reiniciar sesión local
           </button>
         </div>
       </div>
@@ -92,27 +118,34 @@ export default function RouletteScreen() {
   const handleSpin = () => {
     if (isSpinning || !currentParticipant) return;
     
-    setIsSpinning(true);
+    setErrorMsg(null);
     setLastAssignedTeam(null);
     setLastAssignedParticipant(currentParticipant);
+
+    let teamAssigned: Team | undefined;
+
+    // Calcular resultado antes de animar
+    try {
+      const assignment = assignRandomTeamToParticipant(currentParticipant.id);
+      teamAssigned = getTeamById(assignment.team_id);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al asignar selección.');
+      return; // Detener animación si falla la lógica
+    }
+
+    // Iniciar animación si la lógica funcionó
+    setIsSpinning(true);
     
     // Calcular nueva rotación (min 540deg, max 1080deg) + offset aleatorio
     const newRotation = spinRotation + 720 + Math.floor(Math.random() * 360);
     setSpinRotation(newRotation);
 
-    // Esperar a que termine la animación visual
+    // Esperar a que termine la animación visual para mostrar tarjeta
     setTimeout(() => {
-      try {
-        const assignment = assignRandomTeamToParticipant(currentParticipant.id);
-        const team = getTeamById(assignment.team_id);
-        if (team) {
-          setLastAssignedTeam(team);
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setIsSpinning(false);
+      if (teamAssigned) {
+        setLastAssignedTeam(teamAssigned);
       }
+      setIsSpinning(false);
     }, 2500); // 2.5 seconds
   };
 
@@ -120,7 +153,7 @@ export default function RouletteScreen() {
   const currentTurn = currentParticipant ? currentParticipant.turn_order : totalParticipants;
 
   return (
-    <div className="h-full flex flex-col items-center justify-center">
+    <div className="h-full flex flex-col items-center justify-center relative">
       <h2 className="text-3xl font-heading font-bold mb-2">Mundial FC 26</h2>
       <p className="text-[var(--color-muted)] mb-8">Sorteo de Selecciones - {currentSession.name}</p>
       
@@ -161,8 +194,14 @@ export default function RouletteScreen() {
         </div>
       </div>
       
+      {errorMsg && (
+        <div className="mb-4 bg-[rgba(240,68,56,0.1)] border border-[var(--color-danger)] text-[var(--color-danger)] px-4 py-2 rounded-[2px] text-sm animate-fade-in">
+          {errorMsg}
+        </div>
+      )}
+
       <AnimatePresence>
-        {lastAssignedTeam && lastAssignedParticipant && !isSpinning && (
+        {lastAssignedTeam && lastAssignedParticipant && !isSpinning && !errorMsg && (
           <motion.div 
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -190,8 +229,14 @@ export default function RouletteScreen() {
         {isSpinning ? 'Girando...' : 'Girar Ruleta'}
       </button>
       
-      <div className="mt-8 text-[var(--color-muted)] text-sm">
-        Selecciones disponibles: <span className="text-[var(--color-text)] font-mono">{availableTeams.length}</span>
+      <div className="mt-8 text-[var(--color-muted)] text-sm flex flex-col items-center">
+        <div>Selecciones disponibles: <span className="text-[var(--color-text)] font-mono">{availableTeams.length}</span></div>
+        <button 
+          onClick={handleReset}
+          className="text-[var(--color-muted)] text-xs underline hover:text-[var(--color-danger)] transition-colors mt-4"
+        >
+          Reiniciar sesión local
+        </button>
       </div>
     </div>
   );
