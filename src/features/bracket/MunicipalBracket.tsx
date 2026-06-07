@@ -11,6 +11,8 @@ export default function MunicipalBracket() {
   const participants = useTournamentStore(state => state.participants);
   const generateMunicipalBracket = useTournamentStore(state => state.generateMunicipalBracket);
   const getParticipantTeam = useTournamentStore(state => state.getParticipantTeam);
+  const getChampionAndRunnerUp = useTournamentStore(state => state.getChampionAndRunnerUp);
+  const getQualifiedPlayersForCurrentSession = useTournamentStore(state => state.getQualifiedPlayersForCurrentSession);
 
   if (!currentSession) {
     return (
@@ -27,7 +29,7 @@ export default function MunicipalBracket() {
     );
   }
 
-  const validStatuses = ['draw_completed', 'bracket_ready', 'bracket_active'];
+  const validStatuses = ['draw_completed', 'bracket_ready', 'bracket_active', 'completed'];
   if (!validStatuses.includes(currentSession.status)) {
     return (
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6">
@@ -62,8 +64,8 @@ export default function MunicipalBracket() {
 
   const totalMatches = Object.values(matchesByRound).flat().length;
   
-  const getChampionAndRunnerUp = useTournamentStore(state => state.getChampionAndRunnerUp);
   const { champion, runnerUp } = currentSession.status === 'completed' ? getChampionAndRunnerUp() : { champion: null, runnerUp: null };
+  const qualifiedPlayers = currentSession.status === 'completed' ? getQualifiedPlayersForCurrentSession() : [];
 
   const orderedRounds = ['round_32', 'round_16', 'quarterfinal', 'semifinal', 'final'];
   const activeRounds = orderedRounds.filter(r => matchesByRound[r] && matchesByRound[r].length > 0);
@@ -88,6 +90,25 @@ export default function MunicipalBracket() {
               <div className="text-sm text-[var(--color-muted)] uppercase tracking-wider mb-1">Subcampeón</div>
               <div className="text-lg font-bold text-[var(--color-text)]">{runnerUp.display_name}</div>
               <div className="text-sm text-[var(--color-accent)] font-medium">{getParticipantTeam(runnerUp.id)?.name}</div>
+            </div>
+          )}
+
+          {qualifiedPlayers.length > 0 && (
+            <div className="mt-8 pt-6 border-t border-[rgba(38,150,132,0.2)] text-left">
+              <h4 className="text-sm text-[var(--color-success)] uppercase tracking-wider mb-4 font-bold">Clasificados regionales generados</h4>
+              <div className="grid grid-cols-2 gap-4">
+                {qualifiedPlayers.map(qp => {
+                  const p = participants.find(p => p.id === qp.participant_id);
+                  const t = getParticipantTeam(qp.participant_id);
+                  return (
+                    <div key={qp.id} className="bg-[#1a1d24] border border-[var(--color-border)] rounded-lg p-3">
+                      <div className="text-xs text-[var(--color-muted)] font-mono uppercase mb-1">{qp.rank === 'champion' ? 'Campeón' : 'Subcampeón'}</div>
+                      <div className="font-bold text-white text-sm">{p?.display_name}</div>
+                      <div className="text-[var(--color-accent)] font-medium text-xs">{t?.name}</div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
@@ -135,11 +156,12 @@ export default function MunicipalBracket() {
                     <div className="flex justify-between items-start mb-4">
                       <span className="text-xs font-mono text-[var(--color-muted)] bg-[#252a33] px-2 py-1 rounded">Match {match.match_number}</span>
                       <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 rounded ${
+                        match.status === 'completed' && !match.player_b_id ? 'bg-[var(--color-accent)] text-[#05060f]' :
                         match.status === 'completed' ? 'bg-[var(--color-success)] text-white' :
                         match.status === 'ready' ? 'bg-[var(--color-primary)] text-white' :
                         isBye ? 'bg-[var(--color-accent)] text-[#05060f]' : 'bg-[#3f4959] text-white'
                       }`}>
-                        {isBye && match.status !== 'completed' ? 'BYE' : match.status}
+                        {match.status === 'completed' && !match.player_b_id ? 'BYE Automático' : isBye && match.status !== 'completed' ? 'BYE' : match.status}
                       </span>
                     </div>
 
@@ -172,12 +194,21 @@ export default function MunicipalBracket() {
                     </div>
 
                     {match.status === 'completed' ? (
-                      <button 
-                        onClick={() => navigate(`/municipal/${id}/partido/${match.id}`)}
-                        className="w-full bg-transparent border border-[var(--color-border)] text-[var(--color-text)] py-2 rounded-[2px] font-medium text-sm hover:bg-[#3f4959] transition-colors"
-                      >
-                        Ver resultado
-                      </button>
+                      !match.player_b_id ? (
+                        <button 
+                          disabled
+                          className="w-full bg-[#3f4959] text-[var(--color-muted)] py-2 rounded-[2px] font-medium text-sm cursor-not-allowed border border-[var(--color-border)]"
+                        >
+                          Avance automático por BYE
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => navigate(`/municipal/${id}/partido/${match.id}`)}
+                          className="w-full bg-transparent border border-[var(--color-border)] text-[var(--color-text)] py-2 rounded-[2px] font-medium text-sm hover:bg-[#3f4959] transition-colors"
+                        >
+                          Ver resultado
+                        </button>
+                      )
                     ) : match.status === 'ready' ? (
                       <button 
                         onClick={() => navigate(`/municipal/${id}/partido/${match.id}`)}

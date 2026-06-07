@@ -8,9 +8,16 @@ export default function MunicipalSetup() {
   const getMunicipalityById = useTournamentStore(state => state.getMunicipalityById);
   const getRegionById = useTournamentStore(state => state.getRegionById);
   const currentSession = useTournamentStore(state => state.currentSession);
+  const getChampionAndRunnerUp = useTournamentStore(state => state.getChampionAndRunnerUp);
+  const getParticipantTeam = useTournamentStore(state => state.getParticipantTeam);
   
   const municipality = id ? getMunicipalityById(id) : undefined;
   const region = municipality ? getRegionById(municipality.region_id) : undefined;
+
+  const sessionExists = currentSession && currentSession.municipality_id === municipality?.id;
+  const sessionStatus = sessionExists ? currentSession.status : 'No iniciada';
+  const isCompleted = sessionStatus === 'completed';
+  const { champion, runnerUp } = isCompleted ? getChampionAndRunnerUp() : { champion: null, runnerUp: null };
 
   if (!municipality) {
     return (
@@ -20,15 +27,6 @@ export default function MunicipalSetup() {
       </div>
     );
   }
-
-  const sessionExists = currentSession && currentSession.municipality_id === municipality.id;
-  const sessionStatus = sessionExists ? currentSession.status : 'No iniciada';
-  const isCompleted = sessionStatus === 'completed';
-
-  const getChampionAndRunnerUp = useTournamentStore(state => state.getChampionAndRunnerUp);
-  const getParticipantTeam = useTournamentStore(state => state.getParticipantTeam);
-  
-  const { champion, runnerUp } = isCompleted ? getChampionAndRunnerUp() : { champion: null, runnerUp: null };
 
   return (
     <div>
