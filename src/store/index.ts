@@ -94,7 +94,7 @@ export const useTournamentStore = create<TournamentState>()(
         const session: DrawSession = {
           id,
           stage: 'municipal',
-          status: 'draft',
+          status: 'ready_for_draw',
           municipality_id: municipalityId,
           region_id: regionId,
           name: `Sorteo Municipal`,
@@ -117,25 +117,43 @@ export const useTournamentStore = create<TournamentState>()(
       startDraw: () => {
         const session = get().currentSession;
         if (!session) throw new Error("No hay sesión activa");
+        if (session.status !== 'ready_for_draw') throw new Error("El sorteo no está en estado ready_for_draw");
+        
+        const participants = get().participants;
+        if (participants.length < 8 || participants.length > 32) {
+          throw new Error("El número de participantes debe ser entre 8 y 32");
+        }
+
+        const randomized = [...participants].sort(() => Math.random() - 0.5);
+        const orderedParticipants = randomized.map((p, index) => ({
+          ...p,
+          turn_order: index + 1
+        }));
+
         set({ 
-          currentSession: { ...session, status: 'drawing', started_at: new Date().toISOString() }
+          currentSession: { ...session, status: 'drawing', started_at: new Date().toISOString() },
+          participants: [...get().participants.filter(p => p.session_id !== session.id), ...orderedParticipants]
         });
       },
 
-      assignRandomTeamToParticipant: (participantId) => {
+      assignRandomTeamToParticipant: (participantId: string) => {
         const state = get();
         if (!state.currentSession) throw new Error("No hay sesión activa");
         if (state.currentSession.status !== 'drawing') throw new Error("El sorteo no está activo");
         
         const participant = state.participants.find(p => p.id === participantId);
         if (!participant) throw new Error("Participante no encontrado");
+        if (participant.session_id !== state.currentSession.id) throw new Error("Participante no pertenece a la sesión actual");
+
+        const sessionAssignments = state.getAssignmentsForCurrentSession();
+        const hasAssignment = sessionAssignments.some(a => a.participant_id === participantId);
+        if (hasAssignment) throw new Error("Este participante ya tiene selección asignada.");
         
-        const assignedTeamIds = state.assignments.map(a => a.team_id);
+        const assignedTeamIds = sessionAssignments.map(a => a.team_id);
         const availableTeams = state.teams.filter(t => !assignedTeamIds.includes(t.id));
         if (availableTeams.length === 0) throw new Error("No hay selecciones disponibles");
         
         const randomTeam = availableTeams[Math.floor(Math.random() * availableTeams.length)];
-        
         const newAssignment: Assignment = {
           id: crypto.randomUUID(),
           session_id: state.currentSession.id,
@@ -144,14 +162,21 @@ export const useTournamentStore = create<TournamentState>()(
           source: 'municipal_draw',
           assigned_at: new Date().toISOString(),
           created_by: null,
-          sync_status: 'pending_sync'
+          sync_status: 'synced'
         };
         
         const newAssignments = [...state.assignments, newAssignment];
-        set({ assignments: newAssignments });
         
-        if (newAssignments.length === state.participants.length) {
-          set(s => ({ currentSession: { ...s.currentSession!, status: 'draw_completed' } }));
+        set(s => ({ 
+          assignments: newAssignments,
+          participants: s.participants.map(p => p.id === participant.id ? { ...p, status: 'assigned', sync_status: 'synced' } : p)
+        }));
+        
+        const currentSessionAssignments = newAssignments.filter(a => a.session_id === state.currentSession!.id);
+        const currentSessionParticipants = state.participants.filter(p => p.session_id === state.currentSession!.id);
+
+        if (currentSessionAssignments.length === currentSessionParticipants.length) {
+          set(s => ({ currentSession: { ...s.currentSession!, status: 'draw_completed', completed_at: new Date().toISOString() } }));
         }
         
         return newAssignment;
@@ -387,7 +412,7 @@ export const useTournamentStore = create<TournamentState>()(
         const session = get().currentSession;
         if (!session) return [];
         const assignedIds = get().getAssignmentsForCurrentSession().map(a => a.participant_id);
-        return get().participants.filter(p => !assignedIds.includes(p.id));
+        return get().getOrderedParticipants().filter(p => p.session_id === session.id && !assignedIds.includes(p.id));
       },
 
       getQualifiedPlayersForCurrentSession: () => {

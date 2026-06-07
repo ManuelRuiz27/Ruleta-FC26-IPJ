@@ -37,11 +37,11 @@ export default function RouletteScreen() {
     }
   };
 
-  if (!currentSession || orderedParticipants.length === 0) {
+  if (!currentSession || orderedParticipants.length < 8) {
     return (
       <div className="h-full flex flex-col items-center justify-center">
-        <h2 className="text-2xl font-heading font-bold mb-4">No hay sesión activa</h2>
-        <p className="text-[var(--color-muted)] mb-8">Debes registrar participantes primero para iniciar el sorteo.</p>
+        <h2 className="text-2xl font-heading font-bold mb-4">Participantes insuficientes</h2>
+        <p className="text-[var(--color-muted)] mb-8">Debes registrar al menos 8 participantes para iniciar el sorteo.</p>
         <button 
           onClick={() => navigate(`/municipal/${id}/registro`)}
           className="bg-[var(--color-primary)] text-white px-6 py-2 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity"
@@ -52,7 +52,7 @@ export default function RouletteScreen() {
     );
   }
 
-  if (currentSession.status === 'ready_for_draw') {
+  if (currentSession.status === 'ready_for_draw' || currentSession.status === 'draft') {
     return (
       <div className="h-full flex flex-col items-center justify-center">
         <h2 className="text-3xl font-heading font-bold mb-2">Mundial FC 26</h2>
@@ -62,7 +62,7 @@ export default function RouletteScreen() {
             onClick={() => startDraw()}
             className="bg-[var(--color-primary)] text-white px-8 py-3 rounded-[2px] font-bold text-lg hover:bg-opacity-90 transition-opacity"
           >
-            Iniciar sorteo
+            {currentSession.status === 'draft' ? 'Preparar e Iniciar Sorteo' : 'Iniciar sorteo'}
           </button>
           <button 
             onClick={handleReset}
@@ -109,6 +109,24 @@ export default function RouletteScreen() {
             className="text-[var(--color-muted)] text-sm underline hover:text-[var(--color-danger)] transition-colors mt-8"
           >
             Reiniciar sesión local
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const postDrawStatuses = ['completed', 'bracket_ready', 'bracket_active'];
+  if (postDrawStatuses.includes(currentSession.status)) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center">
+        <h2 className="text-3xl font-heading font-bold mb-4 text-[var(--color-success)]">El sorteo ya terminó</h2>
+        <p className="text-[var(--color-muted)] mb-12">Esta sesión ya se encuentra en fase de bracket o finalizada.</p>
+        <div className="flex gap-4 flex-col items-center">
+          <button 
+            onClick={() => navigate(`/municipal/${id}/bracket`)}
+            className="bg-[var(--color-primary)] text-white px-6 py-2 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity"
+          >
+            Ver bracket
           </button>
         </div>
       </div>
