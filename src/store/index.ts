@@ -281,6 +281,7 @@ export const useTournamentStore = create<TournamentState>()(
         if (matchIndex === -1) return;
 
         const match = matches[matchIndex];
+        if (match.status === 'completed' && match.winner_id) return;
         const isBye = !match.player_b_id;
         const loserId = isBye ? null : (winnerId === match.player_a_id ? match.player_b_id : match.player_a_id);
         const winnerTeamId = winnerId === match.player_a_id ? match.team_a_id : match.team_b_id;
@@ -296,6 +297,10 @@ export const useTournamentStore = create<TournamentState>()(
           if (nextMatchIndex !== -1) {
             const nextMatch = { ...newMatches[nextMatchIndex] };
             const isPlayerA = (updatedMatch.match_number % 2) !== 0;
+
+            if (isPlayerA && nextMatch.player_a_id && nextMatch.player_a_id !== winnerId) throw new Error("Slot A destino ya está ocupado por otro participante.");
+            if (!isPlayerA && nextMatch.player_b_id && nextMatch.player_b_id !== winnerId) throw new Error("Slot B destino ya está ocupado por otro participante.");
+
             if (isPlayerA) { nextMatch.player_a_id = winnerId; nextMatch.team_a_id = winnerTeamId; }
             else { nextMatch.player_b_id = winnerId; nextMatch.team_b_id = winnerTeamId; }
             if (nextMatch.player_a_id && nextMatch.player_b_id) nextMatch.status = 'ready';
@@ -327,20 +332,31 @@ export const useTournamentStore = create<TournamentState>()(
         const { matchId, regularScoreA, regularScoreB, extraTimePlayed, penaltiesPlayed, penaltiesScoreA, penaltiesScoreB, winnerId } = input;
         const match = get().matches.find(m => m.id === matchId);
         if (!match) throw new Error("Partido no encontrado");
+        if (match.status !== 'ready') throw new Error("El partido no está listo para capturar marcador");
+        if (!match.player_a_id || !match.player_b_id) throw new Error("El partido no tiene rivales asignados");
+        if (regularScoreA < 0 || regularScoreB < 0) throw new Error("Los marcadores no pueden ser negativos");
+        if (winnerId !== match.player_a_id && winnerId !== match.player_b_id) throw new Error("Ganador inválido");
+
         if (regularScoreA !== regularScoreB) {
-          if (winnerId !== (regularScoreA > regularScoreB ? match.player_a_id : match.player_b_id)) throw new Error("Ganador no coincide");
+          if (winnerId !== (regularScoreA > regularScoreB ? match.player_a_id : match.player_b_id)) throw new Error("Ganador no coincide con marcador regular");
         } else {
           if (!extraTimePlayed) throw new Error("Empate requiere tiempo extra");
           if (penaltiesPlayed) {
             if (penaltiesScoreA == null || penaltiesScoreB == null) throw new Error("Faltan penales");
-            if (winnerId !== (penaltiesScoreA > penaltiesScoreB ? match.player_a_id : match.player_b_id)) throw new Error("Ganador no coincide");
+            if (penaltiesScoreA < 0 || penaltiesScoreB < 0) throw new Error("Los penales no pueden ser negativos");
+            if (penaltiesScoreA === penaltiesScoreB) throw new Error("Los penales no pueden terminar en empate");
+            if (winnerId !== (penaltiesScoreA > penaltiesScoreB ? match.player_a_id : match.player_b_id)) throw new Error("Ganador no coincide con marcador de penales");
           }
         }
+        
+        // Modificamos el match pero guardando status temporal (NO avanza a state.matches directamente para evitar avance asíncrono roto)
+        // advanceWinnerToNextMatch hará el guardado final.
         const matches = get().matches;
         const matchIndex = matches.findIndex(m => m.id === matchId);
         const newMatches = [...matches];
-        newMatches[matchIndex] = { ...match, regular_score_a: regularScoreA, regular_score_b: regularScoreB, extra_time_played: extraTimePlayed, penalties_played: penaltiesPlayed, penalties_score_a: penaltiesScoreA ?? null, penalties_score_b: penaltiesScoreB ?? null, status: 'completed' };
+        newMatches[matchIndex] = { ...match, regular_score_a: regularScoreA, regular_score_b: regularScoreB, extra_time_played: extraTimePlayed, penalties_played: penaltiesPlayed, penalties_score_a: penaltiesScoreA ?? null, penalties_score_b: penaltiesScoreB ?? null };
         set({ matches: newMatches });
+        
         get().advanceWinnerToNextMatch(matchId, winnerId);
       },
 
