@@ -27,6 +27,7 @@ interface TournamentState {
   clearLocalTournamentState: () => void;
   startDraw: () => void;
   assignRandomTeamToParticipant: (participantId: string) => Assignment;
+  generateMunicipalBracket: () => void;
   
   setParticipants: (participants: Participant[]) => void;
   addParticipant: (participant: Participant) => void;
@@ -45,6 +46,10 @@ interface TournamentState {
   getMunicipalityById: (id: string) => Municipality | undefined;
   getRegionById: (id: string) => Region | undefined;
   getTeamById: (id: string) => Team | undefined;
+  getMatchById: (matchId: string) => Match | undefined;
+  getParticipantAssignment: (participantId: string) => Assignment | undefined;
+  getParticipantTeam: (participantId: string) => Team | undefined;
+  getMatchesByRound: () => Record<string, Match[]>;
   getAssignmentsForCurrentSession: () => Assignment[];
   getOrderedParticipants: () => Participant[];
   getPendingParticipants: () => Participant[];
@@ -146,6 +151,104 @@ export const useTournamentStore = create<TournamentState>()(
         return newAssignment;
       },
 
+      generateMunicipalBracket: () => {
+        const session = get().currentSession;
+        if (!session) throw new Error("No hay sesión activa");
+        if (session.status !== 'draw_completed') throw new Error("El sorteo debe completarse primero");
+        
+        const participants = get().getOrderedParticipants();
+        const assignments = get().getAssignmentsForCurrentSession();
+        
+        if (participants.length < 8 || participants.length > 32) {
+          throw new Error("La cantidad de participantes debe estar entre 8 y 32");
+        }
+        
+        if (assignments.length !== participants.length) {
+          throw new Error("Todos los participantes deben tener una selección asignada");
+        }
+
+        let bracketSize = 32;
+        let initialRound = 'round_32';
+        if (participants.length <= 8) {
+          bracketSize = 8;
+          initialRound = 'quarterfinal';
+        } else if (participants.length <= 16) {
+          bracketSize = 16;
+          initialRound = 'round_16';
+        }
+
+        const byeCount = bracketSize - participants.length;
+        const bracketId = crypto.randomUUID();
+
+        const newBracket: Bracket = {
+          id: bracketId,
+          session_id: session.id,
+          bracket_size: bracketSize,
+          participant_count: participants.length,
+          bye_count: byeCount,
+          status: 'ready',
+          generated_by: null,
+          generated_at: new Date().toISOString(),
+          locked_at: null
+        };
+
+        const matchesCount = bracketSize / 2;
+        const newMatches: Match[] = [];
+        
+        // Asignación simple de BYEs
+        // Primero llenamos player_a en todos los matches, luego llenamos player_b con los restantes.
+        let pIdx = 0;
+        
+        // Crear los matches vacíos o con player A
+        for (let i = 0; i < matchesCount; i++) {
+          const pA = participants[pIdx++];
+          const assignmentA = assignments.find(a => a.participant_id === pA.id);
+          
+          newMatches.push({
+            id: crypto.randomUUID(),
+            bracket_id: bracketId,
+            session_id: session.id,
+            round: initialRound as any, // casting to bypass generic round type checking if needed
+            match_number: i + 1,
+            next_match_id: null,
+            player_a_id: pA.id,
+            team_a_id: assignmentA!.team_id,
+            player_b_id: null,
+            team_b_id: null,
+            regular_score_a: null,
+            regular_score_b: null,
+            extra_time_played: false,
+            penalties_played: false,
+            penalties_score_a: null,
+            penalties_score_b: null,
+            winner_id: null,
+            loser_id: null,
+            status: 'pending', // actualizaremos esto en la siguiente fase
+            completed_by: null,
+            completed_at: null,
+            locked_at: null,
+            deleted_at: null,
+            created_at: new Date().toISOString()
+          });
+        }
+        
+        // Asignar player B a los matches que correspondan
+        for (let i = 0; i < matchesCount && pIdx < participants.length; i++) {
+          const pB = participants[pIdx++];
+          const assignmentB = assignments.find(a => a.participant_id === pB.id);
+          
+          newMatches[i].player_b_id = pB.id;
+          newMatches[i].team_b_id = assignmentB!.team_id;
+          newMatches[i].status = 'ready';
+        }
+
+        set(state => ({
+          bracket: newBracket,
+          matches: newMatches,
+          currentSession: { ...state.currentSession!, status: 'bracket_ready' }
+        }));
+      },
+
       setParticipants: (participants) => set({ participants }),
       addParticipant: (participant) => set((state) => ({ participants: [...state.participants, participant] })),
       updateParticipant: (id, data) => set((state) => ({
@@ -182,6 +285,28 @@ export const useTournamentStore = create<TournamentState>()(
       getMunicipalityById: (id) => get().municipalities.find(m => m.id === id),
       getRegionById: (id) => get().regions.find(r => r.id === id),
       getTeamById: (id) => get().teams.find(t => t.id === id),
+      getMatchById: (matchId) => get().matches.find(m => m.id === matchId),
+      
+      getParticipantAssignment: (participantId) => {
+        return get().assignments.find(a => a.participant_id === participantId);
+      },
+      
+      getParticipantTeam: (participantId) => {
+        const assignment = get().getParticipantAssignment(participantId);
+        if (!assignment) return undefined;
+        return get().getTeamById(assignment.team_id);
+      },
+      
+      getMatchesByRound: () => {
+        const matches = get().matches;
+        return matches.reduce((acc, match) => {
+          if (!acc[match.round]) {
+            acc[match.round] = [];
+          }
+          acc[match.round].push(match);
+          return acc;
+        }, {} as Record<string, Match[]>);
+      },
       
       getAssignmentsForCurrentSession: () => {
         const session = get().currentSession;

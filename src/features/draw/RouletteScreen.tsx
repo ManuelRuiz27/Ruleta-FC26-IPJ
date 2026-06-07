@@ -98,10 +98,10 @@ export default function RouletteScreen() {
               Ver Asignaciones
             </button>
             <button 
-              disabled
-              className="bg-[#3f4959] text-[var(--color-muted)] px-6 py-2 rounded-[2px] font-medium cursor-not-allowed border border-[var(--color-border)]"
+              onClick={() => navigate(`/municipal/${id}/bracket`)}
+              className="bg-[var(--color-primary)] text-white px-6 py-2 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity shadow-[0_0_15px_rgba(102,58,243,0.3)]"
             >
-              Generar Bracket (Próximamente)
+              Ir a bracket municipal
             </button>
           </div>
           <button 

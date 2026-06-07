@@ -31,9 +31,19 @@ export default function AssignmentsBoard() {
         <h2 className="text-2xl font-heading font-bold">Tablero de Asignaciones</h2>
         <div className="flex items-center gap-3">
           {currentSession?.status === 'draw_completed' && (
-            <span className="bg-[var(--color-success)] text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-              Sorteo completado
-            </span>
+            <>
+              <span className="bg-[var(--color-success)] text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                Sorteo completado
+              </span>
+              {id && (
+                <button 
+                  onClick={() => navigate(`/municipal/${id}/bracket`)}
+                  className="bg-[var(--color-primary)] text-white px-4 py-1.5 rounded-[2px] text-sm font-medium hover:bg-opacity-90 transition-opacity"
+                >
+                  Ir a Bracket Municipal
+                </button>
+              )}
+            </>
           )}
           {currentSession && currentSession.status !== 'draw_completed' && id && (
             <button 
