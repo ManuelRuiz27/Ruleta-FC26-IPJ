@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { 
   Region, Municipality, Team, DrawSession, Participant, Assignment, 
-  Bracket, Match 
+  Bracket, Match, RoundType 
 } from '../types';
 import { initialRegions } from '../data/regions';
 import { initialMunicipalities } from '../data/municipalities';
@@ -28,6 +28,17 @@ interface TournamentState {
   startDraw: () => void;
   assignRandomTeamToParticipant: (participantId: string) => Assignment;
   generateMunicipalBracket: () => void;
+  submitMatchResult: (input: {
+    matchId: string;
+    regularScoreA: number;
+    regularScoreB: number;
+    extraTimePlayed: boolean;
+    penaltiesPlayed: boolean;
+    penaltiesScoreA?: number | null;
+    penaltiesScoreB?: number | null;
+    winnerId: string;
+  }) => void;
+  advanceWinnerToNextMatch: (matchId: string, winnerId: string) => void;
   
   setParticipants: (participants: Participant[]) => void;
   addParticipant: (participant: Participant) => void;
@@ -50,6 +61,7 @@ interface TournamentState {
   getParticipantAssignment: (participantId: string) => Assignment | undefined;
   getParticipantTeam: (participantId: string) => Team | undefined;
   getMatchesByRound: () => Record<string, Match[]>;
+  getChampionAndRunnerUp: () => { champion?: Participant; runnerUp?: Participant };
   getAssignmentsForCurrentSession: () => Assignment[];
   getOrderedParticipants: () => Participant[];
   getPendingParticipants: () => Participant[];
@@ -168,13 +180,10 @@ export const useTournamentStore = create<TournamentState>()(
         }
 
         let bracketSize = 32;
-        let initialRound = 'round_32';
         if (participants.length <= 8) {
           bracketSize = 8;
-          initialRound = 'quarterfinal';
         } else if (participants.length <= 16) {
           bracketSize = 16;
-          initialRound = 'round_16';
         }
 
         const byeCount = bracketSize - participants.length;
@@ -192,61 +201,205 @@ export const useTournamentStore = create<TournamentState>()(
           locked_at: null
         };
 
-        const matchesCount = bracketSize / 2;
-        const newMatches: Match[] = [];
+        const rounds32: RoundType[] = ['round_32', 'round_16', 'quarterfinal', 'semifinal', 'final'];
+        const startIndex = bracketSize === 32 ? 0 : bracketSize === 16 ? 1 : 2;
+        const rounds = rounds32.slice(startIndex);
         
-        // Asignación simple de BYEs
-        // Primero llenamos player_a en todos los matches, luego llenamos player_b con los restantes.
+        const allMatches: Match[] = [];
+        let currentRoundMatches: Match[] = [];
+
+        // Generar estructura completa del bracket
+        for (let r = 0; r < rounds.length; r++) {
+          const roundName = rounds[r];
+          const matchCount = bracketSize / Math.pow(2, r + 1);
+          const roundMatches: Match[] = [];
+
+          for (let i = 0; i < matchCount; i++) {
+            roundMatches.push({
+              id: crypto.randomUUID(),
+              bracket_id: bracketId,
+              session_id: session.id,
+              round: roundName,
+              match_number: i + 1,
+              next_match_id: null,
+              player_a_id: null,
+              team_a_id: null,
+              player_b_id: null,
+              team_b_id: null,
+              regular_score_a: null,
+              regular_score_b: null,
+              extra_time_played: false,
+              penalties_played: false,
+              penalties_score_a: null,
+              penalties_score_b: null,
+              winner_id: null,
+              loser_id: null,
+              status: 'pending',
+              completed_by: null,
+              completed_at: null,
+              locked_at: null,
+              deleted_at: null,
+              created_at: new Date().toISOString()
+            });
+          }
+
+          // Conectar con ronda previa
+          if (r > 0) {
+            for (let i = 0; i < currentRoundMatches.length; i++) {
+              const prevMatch = currentRoundMatches[i];
+              const nextMatchIndex = Math.floor(i / 2);
+              prevMatch.next_match_id = roundMatches[nextMatchIndex].id;
+            }
+          }
+
+          allMatches.push(...roundMatches);
+          currentRoundMatches = roundMatches;
+        }
+
+        // Poblar la primera ronda con jugadores y byes
+        const initialMatches = allMatches.filter(m => m.round === rounds[0]);
         let pIdx = 0;
         
-        // Crear los matches vacíos o con player A
-        for (let i = 0; i < matchesCount; i++) {
+        for (let i = 0; i < initialMatches.length; i++) {
           const pA = participants[pIdx++];
           const assignmentA = assignments.find(a => a.participant_id === pA.id);
-          
-          newMatches.push({
-            id: crypto.randomUUID(),
-            bracket_id: bracketId,
-            session_id: session.id,
-            round: initialRound as any, // casting to bypass generic round type checking if needed
-            match_number: i + 1,
-            next_match_id: null,
-            player_a_id: pA.id,
-            team_a_id: assignmentA!.team_id,
-            player_b_id: null,
-            team_b_id: null,
-            regular_score_a: null,
-            regular_score_b: null,
-            extra_time_played: false,
-            penalties_played: false,
-            penalties_score_a: null,
-            penalties_score_b: null,
-            winner_id: null,
-            loser_id: null,
-            status: 'pending', // actualizaremos esto en la siguiente fase
-            completed_by: null,
-            completed_at: null,
-            locked_at: null,
-            deleted_at: null,
-            created_at: new Date().toISOString()
-          });
+          initialMatches[i].player_a_id = pA.id;
+          initialMatches[i].team_a_id = assignmentA!.team_id;
         }
         
-        // Asignar player B a los matches que correspondan
-        for (let i = 0; i < matchesCount && pIdx < participants.length; i++) {
+        for (let i = 0; i < initialMatches.length && pIdx < participants.length; i++) {
           const pB = participants[pIdx++];
           const assignmentB = assignments.find(a => a.participant_id === pB.id);
-          
-          newMatches[i].player_b_id = pB.id;
-          newMatches[i].team_b_id = assignmentB!.team_id;
-          newMatches[i].status = 'ready';
+          initialMatches[i].player_b_id = pB.id;
+          initialMatches[i].team_b_id = assignmentB!.team_id;
+          initialMatches[i].status = 'ready';
+        }
+
+        // Configurar estado inicial
+        set(state => ({
+          bracket: newBracket,
+          matches: allMatches,
+          currentSession: { ...state.currentSession!, status: 'bracket_ready' }
+        }));
+
+        // Procesar BYEs automáticamente
+        for (const match of initialMatches) {
+          if (match.player_a_id && !match.player_b_id) {
+            get().advanceWinnerToNextMatch(match.id, match.player_a_id);
+          }
+        }
+      },
+
+      advanceWinnerToNextMatch: (matchId: string, winnerId: string) => {
+        const matches = get().matches;
+        const matchIndex = matches.findIndex(m => m.id === matchId);
+        if (matchIndex === -1) return;
+
+        const match = matches[matchIndex];
+        const isBye = !match.player_b_id;
+        
+        const loserId = isBye ? null : (winnerId === match.player_a_id ? match.player_b_id : match.player_a_id);
+        const winnerTeamId = winnerId === match.player_a_id ? match.team_a_id : match.team_b_id;
+
+        // Marcar partido actual como completado
+        const updatedMatch: Match = {
+          ...match,
+          winner_id: winnerId,
+          loser_id: loserId,
+          status: 'completed',
+          completed_at: new Date().toISOString()
+        };
+
+        const newMatches = [...matches];
+        newMatches[matchIndex] = updatedMatch;
+
+        // Actualizar participantes (campeón/subcampeón) si es la final, o simplemente avanzar
+        let sessionCompleted = false;
+
+        if (updatedMatch.next_match_id) {
+          const nextMatchIndex = newMatches.findIndex(m => m.id === updatedMatch.next_match_id);
+          if (nextMatchIndex !== -1) {
+            const nextMatch = { ...newMatches[nextMatchIndex] };
+            const isPlayerA = (updatedMatch.match_number % 2) !== 0;
+            
+            if (isPlayerA) {
+              nextMatch.player_a_id = winnerId;
+              nextMatch.team_a_id = winnerTeamId;
+            } else {
+              nextMatch.player_b_id = winnerId;
+              nextMatch.team_b_id = winnerTeamId;
+            }
+            
+            if (nextMatch.player_a_id && nextMatch.player_b_id) {
+              nextMatch.status = 'ready';
+            }
+            
+            newMatches[nextMatchIndex] = nextMatch;
+          }
+        } else {
+          // Es la final
+          sessionCompleted = true;
+          const participants = get().participants;
+          set({
+            participants: participants.map(p => {
+              if (p.id === winnerId) return { ...p, status: 'champion' };
+              if (p.id === loserId) return { ...p, status: 'runner_up' };
+              return { ...p, status: 'eliminated' };
+            })
+          });
         }
 
         set(state => ({
-          bracket: newBracket,
           matches: newMatches,
-          currentSession: { ...state.currentSession!, status: 'bracket_ready' }
+          currentSession: sessionCompleted 
+            ? { ...state.currentSession!, status: 'completed', completed_at: new Date().toISOString() }
+            : state.currentSession
         }));
+      },
+
+      submitMatchResult: (input) => {
+        const { matchId, regularScoreA, regularScoreB, extraTimePlayed, penaltiesPlayed, penaltiesScoreA, penaltiesScoreB, winnerId } = input;
+        
+        const match = get().matches.find(m => m.id === matchId);
+        if (!match) throw new Error("Partido no encontrado");
+        if (!match.player_a_id || !match.player_b_id) throw new Error("El partido no tiene ambos jugadores");
+        if (match.status !== 'ready') throw new Error("El partido no está listo para capturar resultado");
+        
+        if (regularScoreA < 0 || regularScoreB < 0) throw new Error("Los marcadores no pueden ser negativos");
+        
+        if (regularScoreA !== regularScoreB) {
+          const expectedWinnerId = regularScoreA > regularScoreB ? match.player_a_id : match.player_b_id;
+          if (winnerId !== expectedWinnerId) throw new Error("El ganador seleccionado no coincide con el marcador regular");
+        } else {
+          if (!extraTimePlayed) throw new Error("Un empate requiere tiempos extra");
+          if (penaltiesPlayed) {
+            if (penaltiesScoreA == null || penaltiesScoreB == null) throw new Error("Debe ingresar marcadores de penales");
+            if (penaltiesScoreA === penaltiesScoreB) throw new Error("Los penales no pueden terminar en empate");
+            const expectedWinnerId = penaltiesScoreA > penaltiesScoreB ? match.player_a_id : match.player_b_id;
+            if (winnerId !== expectedWinnerId) throw new Error("El ganador seleccionado no coincide con el marcador de penales");
+          }
+        }
+
+        const matches = get().matches;
+        const matchIndex = matches.findIndex(m => m.id === matchId);
+        
+        const updatedMatch: Match = {
+          ...match,
+          regular_score_a: regularScoreA,
+          regular_score_b: regularScoreB,
+          extra_time_played: extraTimePlayed,
+          penalties_played: penaltiesPlayed,
+          penalties_score_a: penaltiesScoreA ?? null,
+          penalties_score_b: penaltiesScoreB ?? null,
+          status: 'completed', // prevent advanceWinnerToNextMatch from double setting status
+        };
+
+        const newMatches = [...matches];
+        newMatches[matchIndex] = updatedMatch;
+        set({ matches: newMatches });
+
+        // Utilizamos la función base para el avance y marcado final
+        get().advanceWinnerToNextMatch(matchId, winnerId);
       },
 
       setParticipants: (participants) => set({ participants }),
@@ -306,6 +459,13 @@ export const useTournamentStore = create<TournamentState>()(
           acc[match.round].push(match);
           return acc;
         }, {} as Record<string, Match[]>);
+      },
+      
+      getChampionAndRunnerUp: () => {
+        const participants = get().participants;
+        const champion = participants.find(p => p.status === 'champion');
+        const runnerUp = participants.find(p => p.status === 'runner_up');
+        return { champion, runnerUp };
       },
       
       getAssignmentsForCurrentSession: () => {
