@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
+import NotFound from './components/NotFound';
 import EstatalDashboard from './features/dashboard/EstatalDashboard';
 import MunicipalSetup from './features/setup/MunicipalSetup';
 import ParticipantsRegistry from './features/setup/ParticipantsRegistry';
@@ -24,6 +25,8 @@ function App() {
           <Route path="/municipal/:id/bracket" element={<MunicipalBracket />} />
           <Route path="/municipal/:id/partido/:matchId" element={<MatchScoreCapture />} />
         </Route>
+
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );
