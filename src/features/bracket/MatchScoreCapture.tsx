@@ -41,7 +41,7 @@ export default function MatchScoreCapture() {
   const pB = participants.find(p => p.id === match.player_b_id);
   const tB = teams.find(t => t.id === match.team_b_id);
 
-  if (!pA || !pB) {
+  if (!pA) {
     return (
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6">
         <h2 className="text-xl font-heading font-bold mb-2">Partido no listo</h2>
@@ -56,7 +56,44 @@ export default function MatchScoreCapture() {
     );
   }
 
-  if (match.status === 'completed') {
+  const isBye = !match.player_b_id;
+
+  if (match.status === 'completed' && isBye) {
+    return (
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6 text-center">
+        <h2 className="text-2xl font-heading font-bold mb-4 text-[var(--color-accent)]">Avance automático por BYE</h2>
+        <div className="bg-[#1a1d24] p-6 rounded-lg mb-6 border border-[var(--color-border)] inline-block">
+          <div className="text-xl font-bold text-white mb-2">{pA.display_name}</div>
+          <div className="text-[var(--color-accent)] font-medium">{tA?.name}</div>
+        </div>
+        <div>
+          <button 
+            onClick={() => navigate(`/municipal/${id}/bracket`)}
+            className="w-full bg-[var(--color-primary)] text-white px-4 py-2 rounded-[2px] font-medium"
+          >
+            Volver al Bracket
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (match.status === 'pending') {
+    return (
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6 text-center">
+        <h2 className="text-xl font-heading font-bold mb-2 text-[var(--color-primary)]">Partido pendiente de rival</h2>
+        <p className="text-[var(--color-muted)] mb-6">Aún falta que se resuelvan los partidos anteriores para conocer a ambos contrincantes.</p>
+        <button 
+          onClick={() => navigate(`/municipal/${id}/bracket`)}
+          className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-[2px] font-medium"
+        >
+          Volver al Bracket
+        </button>
+      </div>
+    );
+  }
+
+  if (match.status === 'completed' && pB && tB) {
     const winner = match.winner_id === pA.id ? pA : pB;
     return (
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6">
@@ -89,6 +126,16 @@ export default function MatchScoreCapture() {
         >
           Volver al Bracket
         </button>
+      </div>
+    );
+  }
+
+  if (!pB || !tB) {
+    return (
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6">
+        <h2 className="text-xl font-heading font-bold mb-2">Error</h2>
+        <p className="text-[var(--color-muted)] mb-4">Faltan datos del rival.</p>
+        <button onClick={() => navigate(`/municipal/${id}/bracket`)} className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-[2px] font-medium">Volver</button>
       </div>
     );
   }
