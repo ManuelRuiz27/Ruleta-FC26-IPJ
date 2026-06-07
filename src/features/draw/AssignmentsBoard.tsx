@@ -1,9 +1,10 @@
 import { useTournamentStore } from '../../store';
 
 export default function AssignmentsBoard() {
-  const participants = useTournamentStore(state => state.participants);
+  const participants = useTournamentStore(state => state.getOrderedParticipants());
   const assignments = useTournamentStore(state => state.getAssignmentsForCurrentSession());
   const teams = useTournamentStore(state => state.teams);
+  const currentSession = useTournamentStore(state => state.currentSession);
 
   if (participants.length === 0) {
     return (
@@ -16,9 +17,36 @@ export default function AssignmentsBoard() {
     );
   }
 
+  const assignedCount = assignments.length;
+  const totalCount = participants.length;
+  const pendingCount = totalCount - assignedCount;
+
   return (
     <div>
-      <h2 className="text-2xl font-heading font-bold mb-6">Tablero de Asignaciones</h2>
+      <div className="flex justify-between items-end mb-6">
+        <h2 className="text-2xl font-heading font-bold">Tablero de Asignaciones</h2>
+        {currentSession?.status === 'draw_completed' && (
+          <span className="bg-[var(--color-success)] text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+            Sorteo completado
+          </span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 flex flex-col items-center">
+          <div className="text-sm text-[var(--color-muted)] font-mono mb-1">Total</div>
+          <div className="text-2xl font-bold">{totalCount}</div>
+        </div>
+        <div className="bg-[var(--color-surface)] border border-[var(--color-success)] border-opacity-30 rounded-xl p-4 flex flex-col items-center">
+          <div className="text-sm text-[var(--color-muted)] font-mono mb-1">Asignados</div>
+          <div className="text-2xl font-bold text-[var(--color-success)]">{assignedCount}</div>
+        </div>
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 flex flex-col items-center">
+          <div className="text-sm text-[var(--color-muted)] font-mono mb-1">Pendientes</div>
+          <div className="text-2xl font-bold">{pendingCount}</div>
+        </div>
+      </div>
+
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -36,9 +64,9 @@ export default function AssignmentsBoard() {
               
               return (
                 <tr key={participant.id} className="border-b border-[var(--color-border)] hover:bg-[#252a33] transition-colors">
-                  <td className="p-4">{participant.turn_order || index + 1}</td>
+                  <td className="p-4 text-[var(--color-muted)] font-mono">{participant.turn_order || index + 1}</td>
                   <td className="p-4 font-medium">{participant.display_name}</td>
-                  <td className="p-4 text-[var(--color-accent)]">{team ? team.name : '—'}</td>
+                  <td className="p-4 text-[var(--color-accent)] font-bold">{team ? team.name : '—'}</td>
                   <td className="p-4">
                     {team ? (
                       <span className="inline-flex items-center px-2 py-1 rounded-[6px] text-xs font-medium bg-[var(--color-success)] text-white">

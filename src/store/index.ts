@@ -23,6 +23,8 @@ interface TournamentState {
   setCurrentSession: (session: DrawSession | null) => void;
   createMunicipalSession: (municipalityId: string, regionId: string) => DrawSession;
   resetMunicipalSession: () => void;
+  startDraw: () => void;
+  assignRandomTeamToParticipant: (participantId: string) => Assignment;
   
   setParticipants: (participants: Participant[]) => void;
   addParticipant: (participant: Participant) => void;
@@ -40,7 +42,11 @@ interface TournamentState {
   // Getters & Validators
   getMunicipalityById: (id: string) => Municipality | undefined;
   getRegionById: (id: string) => Region | undefined;
+  getTeamById: (id: string) => Team | undefined;
   getAssignmentsForCurrentSession: () => Assignment[];
+  getOrderedParticipants: () => Participant[];
+  getPendingParticipants: () => Participant[];
+  getAvailableTeams: () => Team[];
   validateParticipantNames: (names: string[]) => { valid: boolean; errors: string[] };
 }
 
@@ -68,7 +74,7 @@ export const useTournamentStore = create<TournamentState>((set, get) => ({
       participant_max: 32,
       allow_duplicate_teams: false,
       created_by: null,
-      started_at: new Date().toISOString(),
+      started_at: null,
       completed_at: null,
       locked_at: null,
       deleted_at: null,
@@ -79,6 +85,56 @@ export const useTournamentStore = create<TournamentState>((set, get) => ({
   },
   resetMunicipalSession: () => set({ currentSession: null, participants: [], assignments: [], bracket: null, matches: [] }),
   
+  startDraw: () => {
+    const session = get().currentSession;
+    if (!session) throw new Error("No hay sesión activa");
+    if (get().participants.length === 0) throw new Error("No hay participantes registrados");
+    if (session.status !== 'ready_for_draw') return;
+
+    const randomized = [...get().participants].sort(() => Math.random() - 0.5);
+    const orderedParticipants = randomized.map((p, index) => ({
+      ...p,
+      turn_order: index + 1
+    }));
+
+    set({ 
+      currentSession: { ...session, status: 'drawing', started_at: new Date().toISOString() },
+      participants: orderedParticipants 
+    });
+  },
+
+  assignRandomTeamToParticipant: (participantId) => {
+    const session = get().currentSession;
+    if (!session) throw new Error("No hay sesión activa");
+    
+    const availableTeams = get().getAvailableTeams();
+    if (availableTeams.length === 0) throw new Error("No hay selecciones disponibles");
+    
+    const randomTeam = availableTeams[Math.floor(Math.random() * availableTeams.length)];
+    
+    const newAssignment: Assignment = {
+      id: crypto.randomUUID(),
+      session_id: session.id,
+      participant_id: participantId,
+      team_id: randomTeam.id,
+      source: 'municipal_draw',
+      assigned_at: new Date().toISOString(),
+      created_by: null,
+      sync_status: 'synced'
+    };
+    
+    const pendingParticipants = get().getPendingParticipants();
+    const isLast = pendingParticipants.length === 1 && pendingParticipants[0].id === participantId;
+    
+    set(state => ({
+      assignments: [...state.assignments, newAssignment],
+      participants: state.participants.map(p => p.id === participantId ? { ...p, status: 'assigned' } : p),
+      currentSession: isLast ? { ...state.currentSession!, status: 'draw_completed', completed_at: new Date().toISOString() } : state.currentSession
+    }));
+    
+    return newAssignment;
+  },
+
   setParticipants: (participants) => set({ participants }),
   addParticipant: (participant) => set((state) => ({ participants: [...state.participants, participant] })),
   updateParticipant: (id, data) => set((state) => ({
@@ -114,11 +170,32 @@ export const useTournamentStore = create<TournamentState>((set, get) => ({
 
   getMunicipalityById: (id) => get().municipalities.find(m => m.id === id),
   getRegionById: (id) => get().regions.find(r => r.id === id),
+  getTeamById: (id) => get().teams.find(t => t.id === id),
+  
   getAssignmentsForCurrentSession: () => {
     const session = get().currentSession;
     if (!session) return [];
     return get().assignments.filter(a => a.session_id === session.id);
   },
+  
+  getOrderedParticipants: () => {
+    return [...get().participants].sort((a, b) => (a.turn_order || 0) - (b.turn_order || 0));
+  },
+  
+  getPendingParticipants: () => {
+    const session = get().currentSession;
+    if (!session) return [];
+    const assignments = get().getAssignmentsForCurrentSession();
+    return get().getOrderedParticipants().filter(p => !assignments.some(a => a.participant_id === p.id));
+  },
+  
+  getAvailableTeams: () => {
+    const session = get().currentSession;
+    if (!session) return get().teams;
+    const assignments = get().getAssignmentsForCurrentSession();
+    return get().teams.filter(t => !assignments.some(a => a.team_id === t.id));
+  },
+
   validateParticipantNames: (names) => {
     const errors: string[] = [];
     if (names.length < 8) errors.push('Mínimo 8 participantes requeridos.');
