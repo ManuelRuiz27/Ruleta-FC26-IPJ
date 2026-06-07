@@ -27,6 +27,7 @@ interface TournamentState {
   clearLocalTournamentState: () => void;
   qualifiedPlayers: QualifiedPlayer[];
 
+  prepareDraftSessionForDraw: () => void;
   startDraw: () => void;
   assignRandomTeamToParticipant: (participantId: string) => Assignment;
   generateMunicipalBracket: () => void;
@@ -114,17 +115,28 @@ export const useTournamentStore = create<TournamentState>()(
       resetMunicipalSession: () => set({ currentSession: null, participants: [], assignments: [], bracket: null, matches: [], qualifiedPlayers: [] }),
       clearLocalTournamentState: () => set({ currentSession: null, participants: [], assignments: [], bracket: null, matches: [], qualifiedPlayers: [] }),
       
+      prepareDraftSessionForDraw: () => {
+        const session = get().currentSession;
+        if (!session) throw new Error("No hay sesión activa");
+        if (session.status !== 'draft') throw new Error("La sesión no está en estado draft");
+        const sessionParticipants = get().participants.filter(p => p.session_id === session.id);
+        if (sessionParticipants.length < 8 || sessionParticipants.length > 32) {
+          throw new Error("El número de participantes de la sesión debe ser entre 8 y 32");
+        }
+        set({ currentSession: { ...session, status: 'ready_for_draw' } });
+      },
+
       startDraw: () => {
         const session = get().currentSession;
         if (!session) throw new Error("No hay sesión activa");
         if (session.status !== 'ready_for_draw') throw new Error("El sorteo no está en estado ready_for_draw");
         
-        const participants = get().participants;
-        if (participants.length < 8 || participants.length > 32) {
-          throw new Error("El número de participantes debe ser entre 8 y 32");
+        const sessionParticipants = get().participants.filter(p => p.session_id === session.id);
+        if (sessionParticipants.length < 8 || sessionParticipants.length > 32) {
+          throw new Error("El número de participantes de esta sesión debe ser entre 8 y 32");
         }
 
-        const randomized = [...participants].sort(() => Math.random() - 0.5);
+        const randomized = [...sessionParticipants].sort(() => Math.random() - 0.5);
         const orderedParticipants = randomized.map((p, index) => ({
           ...p,
           turn_order: index + 1
@@ -169,7 +181,7 @@ export const useTournamentStore = create<TournamentState>()(
         
         set(s => ({ 
           assignments: newAssignments,
-          participants: s.participants.map(p => p.id === participant.id ? { ...p, status: 'assigned', sync_status: 'synced' } : p)
+          participants: s.participants.map(p => p.id === participant.id ? { ...p, status: 'assigned', sync_status: 'synced', updated_at: new Date().toISOString() } : p)
         }));
         
         const currentSessionAssignments = newAssignments.filter(a => a.session_id === state.currentSession!.id);
@@ -381,7 +393,7 @@ export const useTournamentStore = create<TournamentState>()(
       updateParticipant: (id, data) => set((state) => ({ participants: state.participants.map(p => p.id === id ? { ...p, ...data } : p) })),
       removeParticipant: (id) => set((state) => ({ participants: state.participants.filter(p => p.id !== id) })),
       setParticipantsFromNames: (names, sessionId) => {
-        const newParticipants: Participant[] = names.map((name) => ({ id: crypto.randomUUID(), session_id: sessionId, source_qualified_player_id: null, display_name: name, turn_order: null, status: 'registered', sync_status: 'pending_sync', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), deleted_at: null }));
+        const newParticipants: Participant[] = names.map((name) => ({ id: crypto.randomUUID(), session_id: sessionId, source_qualified_player_id: null, display_name: name, turn_order: null, status: 'registered', sync_status: 'synced', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), deleted_at: null }));
         set({ participants: newParticipants });
       },
       

@@ -52,18 +52,57 @@ export default function RouletteScreen() {
     );
   }
 
-  if (currentSession.status === 'ready_for_draw' || currentSession.status === 'draft') {
+  const prepareDraftSessionForDraw = useTournamentStore(state => state.prepareDraftSessionForDraw);
+
+  if (currentSession.status === 'draft') {
+    return (
+      <div className="h-full flex flex-col items-center justify-center">
+        <h2 className="text-3xl font-heading font-bold mb-2">Sorteo en borrador</h2>
+        <p className="text-[var(--color-muted)] mb-8">Esta sesión necesita preparación antes de iniciar el sorteo.</p>
+        <div className="flex gap-4 flex-col items-center">
+          <button 
+            onClick={() => {
+              try {
+                prepareDraftSessionForDraw();
+              } catch (err: any) {
+                setErrorMsg(err.message || 'Error al preparar sesión.');
+              }
+            }}
+            className="bg-transparent border border-[var(--color-primary)] text-[var(--color-primary)] px-8 py-3 rounded-[2px] font-bold text-lg hover:bg-[rgba(102,58,243,0.1)] transition-colors"
+          >
+            Preparar sorteo
+          </button>
+          {errorMsg && <p className="text-[var(--color-danger)] text-sm mt-2">{errorMsg}</p>}
+          <button 
+            onClick={handleReset}
+            className="text-[var(--color-muted)] text-sm underline hover:text-[var(--color-danger)] transition-colors mt-4"
+          >
+            Reiniciar sesión local
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentSession.status === 'ready_for_draw') {
     return (
       <div className="h-full flex flex-col items-center justify-center">
         <h2 className="text-3xl font-heading font-bold mb-2">Mundial FC 26</h2>
         <p className="text-[var(--color-muted)] mb-8">Sesión lista para iniciar: {currentSession.name}</p>
         <div className="flex gap-4 flex-col items-center">
           <button 
-            onClick={() => startDraw()}
+            onClick={() => {
+              try {
+                startDraw();
+              } catch (err: any) {
+                setErrorMsg(err.message || 'Error al iniciar sorteo.');
+              }
+            }}
             className="bg-[var(--color-primary)] text-white px-8 py-3 rounded-[2px] font-bold text-lg hover:bg-opacity-90 transition-opacity"
           >
-            {currentSession.status === 'draft' ? 'Preparar e Iniciar Sorteo' : 'Iniciar sorteo'}
+            Iniciar sorteo
           </button>
+          {errorMsg && <p className="text-[var(--color-danger)] text-sm mt-2">{errorMsg}</p>}
           <button 
             onClick={handleReset}
             className="text-[var(--color-muted)] text-sm underline hover:text-[var(--color-danger)] transition-colors mt-4"
