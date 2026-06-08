@@ -1,10 +1,10 @@
 export type UserRole = 'municipal_operator' | 'regional_operator' | 'state_committee' | 'viewer';
-export type StageType = 'municipal' | 'regional' | 'state_final';
+export type StageType = 'municipal' | 'regional' | 'state';
 export type SessionStatus = 'draft' | 'ready_for_draw' | 'drawing' | 'draw_completed' | 'bracket_ready' | 'bracket_active' | 'completed' | 'locked';
 export type ParticipantStatus = 'registered' | 'assigned' | 'playing' | 'eliminated' | 'champion' | 'runner_up' | 'qualified';
 export type AssignmentSource = 'municipal_draw' | 'regional_reassignment' | 'state_reassignment';
 export type MatchStatus = 'pending' | 'ready' | 'completed' | 'locked' | 'correction_required';
-export type RoundType = 'round_32' | 'round_16' | 'quarterfinal' | 'semifinal' | 'final';
+export type RoundType = 'round_64' | 'round_32' | 'round_16' | 'quarterfinal' | 'semifinal' | 'final';
 export type QualificationRank = 'champion' | 'runner_up';
 export type SyncStatus = 'synced' | 'pending_sync' | 'sync_error';
 
@@ -221,6 +221,37 @@ export interface CompletedRegionalResult {
   runner_up_name: string;
   runner_up_team_id: string;
   runner_up_team_name: string;
+
+  final_match_id: string | null;
+  final_regular_score_champion: number | null;
+  final_regular_score_runner_up: number | null;
+  final_extra_time_played: boolean;
+  final_penalties_played: boolean;
+  final_penalties_score_champion: number | null;
+  final_penalties_score_runner_up: number | null;
+  final_decision_method: "regular" | "extra_time" | "penalties" | "bye" | "unknown";
+}
+
+export interface CompletedStateResult {
+  id: string;
+  source_session_id: string;
+  completed_at: string;
+  
+  participant_count: number;
+  bracket_size: number;
+  bye_count: number;
+
+  champion_participant_id: string;
+  champion_name: string;
+  champion_team_id: string;
+  champion_team_name: string;
+  champion_region_name: string;
+
+  runner_up_participant_id: string;
+  runner_up_name: string;
+  runner_up_team_id: string;
+  runner_up_team_name: string;
+  runner_up_region_name: string;
 
   final_match_id: string | null;
   final_regular_score_champion: number | null;

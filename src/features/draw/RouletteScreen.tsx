@@ -1,8 +1,44 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTournamentStore } from '../../store';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Team } from '../../types';
+
+const playTickSound = () => {
+  try {
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    oscillator.type = 'triangle';
+    oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.05);
+    gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    oscillator.start();
+    oscillator.stop(audioCtx.currentTime + 0.05);
+  } catch (e) {}
+};
+
+const playSuccessSound = () => {
+  try {
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => { 
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.value = freq;
+      gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.1);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      oscillator.start(audioCtx.currentTime + i * 0.05);
+      oscillator.stop(audioCtx.currentTime + 1.5);
+    });
+  } catch (e) {}
+};
 
 export default function RouletteScreen() {
   const { id } = useParams<{ id: string }>();
@@ -10,15 +46,28 @@ export default function RouletteScreen() {
   
   const currentSession = useTournamentStore(state => state.currentSession);
   const startDraw = useTournamentStore(state => state.startDraw);
-  const getOrderedParticipants = useTournamentStore(state => state.getOrderedParticipants);
-  const getPendingParticipants = useTournamentStore(state => state.getPendingParticipants);
-  const getAvailableTeams = useTournamentStore(state => state.getAvailableTeams);
   const assignRandomTeamToParticipant = useTournamentStore(state => state.assignRandomTeamToParticipant);
   const getTeamById = useTournamentStore(state => state.getTeamById);
 
-  const orderedParticipants = getOrderedParticipants();
-  const pendingParticipants = getPendingParticipants();
-  const availableTeams = getAvailableTeams();
+  const allParticipants = useTournamentStore(state => state.participants);
+  const assignments = useTournamentStore(state => state.assignments);
+  const teams = useTournamentStore(state => state.teams);
+
+  const orderedParticipants = allParticipants
+    .filter(p => p.session_id === currentSession?.id)
+    .sort((a, b) => (a.turn_order || 0) - (b.turn_order || 0));
+
+  const assignedParticipantIds = assignments
+    .filter(a => a.session_id === currentSession?.id)
+    .map(a => a.participant_id);
+
+  const pendingParticipants = orderedParticipants.filter(p => !assignedParticipantIds.includes(p.id));
+
+  const assignedTeamIds = assignments
+    .filter(a => a.session_id === currentSession?.id)
+    .map(a => a.team_id);
+
+  const availableTeams = teams.filter(t => !assignedTeamIds.includes(t.id));
 
   const currentParticipant = pendingParticipants.length > 0 ? pendingParticipants[0] : null;
 
@@ -27,6 +76,20 @@ export default function RouletteScreen() {
   const [lastAssignedTeam, setLastAssignedTeam] = useState<Team | null>(null);
   const [lastAssignedParticipant, setLastAssignedParticipant] = useState<typeof currentParticipant>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [wheelTeams, setWheelTeams] = useState<Team[]>([]);
+  
+  const lastTickAngle = useRef<number>(0);
+
+  useEffect(() => {
+    if (!isSpinning && availableTeams.length > 0) {
+      const shuffled = [...availableTeams].sort(() => Math.random() - 0.5);
+      const display = [];
+      for (let i = 0; i < 8; i++) {
+        display.push(shuffled[i % shuffled.length]);
+      }
+      setWheelTeams(display);
+    }
+  }, [availableTeams, isSpinning]);
 
   const clearLocalTournamentState = useTournamentStore(state => state.clearLocalTournamentState);
 
@@ -44,7 +107,7 @@ export default function RouletteScreen() {
         <p className="text-[var(--color-muted)] mb-8">Debes registrar al menos 8 participantes para iniciar el sorteo.</p>
         <button 
           onClick={() => navigate(`/municipal/${id}/registro`)}
-          className="bg-[var(--color-primary)] text-white px-6 py-2 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity"
+          className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-6 py-2 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity"
         >
           Ir a Registro
         </button>
@@ -98,7 +161,7 @@ export default function RouletteScreen() {
                 setErrorMsg(err.message || 'Error al iniciar sorteo.');
               }
             }}
-            className="bg-[var(--color-primary)] text-white px-8 py-3 rounded-[2px] font-bold text-lg hover:bg-opacity-90 transition-opacity"
+            className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-8 py-3 rounded-[2px] font-bold text-lg hover:bg-opacity-90 transition-opacity"
           >
             Iniciar sorteo
           </button>
@@ -138,7 +201,7 @@ export default function RouletteScreen() {
             </button>
             <button 
               onClick={() => navigate(`/municipal/${id}/bracket`)}
-              className="bg-[var(--color-primary)] text-white px-6 py-2 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity shadow-[0_0_15px_rgba(102,58,243,0.3)]"
+              className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-6 py-2 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity shadow-[0_0_15px_rgba(102,58,243,0.3)]"
             >
               Ir a bracket municipal
             </button>
@@ -163,7 +226,7 @@ export default function RouletteScreen() {
         <div className="flex gap-4 flex-col items-center">
           <button 
             onClick={() => navigate(`/municipal/${id}/bracket`)}
-            className="bg-[var(--color-primary)] text-white px-6 py-2 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity"
+            className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-6 py-2 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity"
           >
             Ver bracket
           </button>
@@ -190,17 +253,34 @@ export default function RouletteScreen() {
       return; // Detener animación si falla la lógica
     }
 
+    if (!teamAssigned) return;
+
+    // Asegurar que teamAssigned está en wheelTeams
+    const updatedWheelTeams = [...wheelTeams];
+    let targetIndex = updatedWheelTeams.findIndex(t => t.id === teamAssigned!.id);
+    if (targetIndex === -1) {
+      targetIndex = Math.floor(Math.random() * 8);
+      updatedWheelTeams[targetIndex] = teamAssigned;
+      setWheelTeams(updatedWheelTeams);
+    }
+
     // Iniciar animación si la lógica funcionó
     setIsSpinning(true);
     
-    // Calcular nueva rotación (min 540deg, max 1080deg) + offset aleatorio
-    const newRotation = spinRotation + 720 + Math.floor(Math.random() * 360);
+    // Calcular nueva rotación para que el puntero apunte al targetIndex
+    // targetIndex * 45 + newRotation = 360 * k
+    const randomOffset = Math.floor(Math.random() * 30) - 15; // +- 15 grados dentro del segmento
+    // Modificamos a -newRotation porque la rueda gira en sentido horario y la formula es 360 - ...
+    const newRotation = spinRotation + (360 * 5) - (targetIndex * 45) + randomOffset;
+    
+    lastTickAngle.current = spinRotation;
     setSpinRotation(newRotation);
 
     // Esperar a que termine la animación visual para mostrar tarjeta
     setTimeout(() => {
       if (teamAssigned) {
         setLastAssignedTeam(teamAssigned);
+        playSuccessSound();
       }
       setIsSpinning(false);
     }, 2500); // 2.5 seconds
@@ -221,22 +301,43 @@ export default function RouletteScreen() {
       <div className="w-80 h-80 relative flex items-center justify-center mb-8">
         {/* Contenedor de la ruleta visual */}
         <motion.div 
-          className="w-full h-full border-[6px] border-[var(--color-border)] rounded-full absolute"
+          className="w-full h-full border-[6px] border-[var(--color-border)] rounded-full absolute overflow-hidden"
           animate={{ rotate: spinRotation }}
           transition={{ duration: 2.5, ease: [0.2, 0.8, 0.2, 1] }}
+          onUpdate={(latest) => {
+            const currentAngle = latest.rotate as number;
+            const segment = Math.floor(currentAngle / 45);
+            const lastSegment = Math.floor(lastTickAngle.current / 45);
+            if (segment !== lastSegment) {
+              playTickSound();
+              lastTickAngle.current = currentAngle;
+            }
+          }}
           style={{ 
             background: 'conic-gradient(from 0deg, var(--color-surface) 0%, #1a1d24 50%, var(--color-surface) 100%)',
             boxShadow: '0 0 40px rgba(102,58,243,0.1)'
           }}
         >
           {/* Decorative segments inside the roulette */}
-          {Array.from({ length: 8 }).map((_, i) => (
+          {wheelTeams.map((team, i) => {
+            return (
             <div 
               key={i} 
-              className="absolute w-1 h-full bg-[var(--color-border)] left-1/2 -ml-[2px]" 
+              className="absolute w-full h-full flex justify-center" 
               style={{ transform: `rotate(${i * 45}deg)` }}
-            />
-          ))}
+            >
+              {team && team.flag_asset_url && (
+                <div 
+                  className="absolute top-6 w-10 h-7 bg-cover bg-center rounded-[2px] opacity-70 border border-white/20" 
+                  style={{
+                    backgroundImage: `url(${team.flag_asset_url})`
+                  }}
+                />
+              )}
+              <div className="absolute w-[2px] h-full bg-[var(--color-border)]" />
+            </div>
+            );
+          })}
         </motion.div>
         
         {/* Pointer */}
@@ -263,13 +364,23 @@ export default function RouletteScreen() {
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="mb-8 bg-[#252a33] p-4 rounded-xl border border-[var(--color-success)] text-center shadow-[0_0_20px_rgba(38,150,132,0.2)]"
+            className="mb-8 bg-[#252a33] p-6 rounded-xl border border-[var(--color-success)] text-center shadow-[0_0_30px_rgba(38,150,132,0.3)] min-w-[320px]"
           >
-            <div className="text-[var(--color-text)]">
-              <span className="font-bold">{lastAssignedParticipant.display_name}</span>
-              {' representará a '}
+            <div className="text-[var(--color-muted)] text-sm uppercase tracking-widest mb-2">Selección Asignada</div>
+            <div className="text-[var(--color-text)] mb-4">
+              <span className="font-bold text-xl">{lastAssignedParticipant.display_name}</span>
             </div>
-            <div className="text-[var(--color-success)] font-bold text-2xl mt-1">{lastAssignedTeam.name}</div>
+            <motion.div 
+              initial={{ scale: 0 }}
+              animate={{ scale: 1, rotate: 360 }}
+              transition={{ type: "spring", stiffness: 200, damping: 15 }}
+              className="flex justify-center mb-3"
+            >
+              {lastAssignedTeam.flag_asset_url && (
+                <img src={lastAssignedTeam.flag_asset_url} alt={lastAssignedTeam.name} className="w-20 h-14 rounded shadow-lg border border-white/20" />
+              )}
+            </motion.div>
+            <div className="text-[var(--color-success)] font-bold text-3xl font-heading">{lastAssignedTeam.name}</div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -280,7 +391,7 @@ export default function RouletteScreen() {
         className={`px-10 py-4 rounded-[2px] font-bold text-xl shadow-[0_0_15px_rgba(102,58,243,0.3)] transition-all ${
           isSpinning || !currentParticipant
             ? 'bg-[#3f4959] text-[var(--color-muted)] cursor-not-allowed shadow-none border border-[var(--color-border)]'
-            : 'bg-[var(--color-primary)] text-white hover:bg-opacity-90 hover:scale-105'
+            : 'bg-[var(--color-primary)] text-[var(--color-primary-content)] hover:bg-opacity-90 hover:scale-105'
         }`}
       >
         {isSpinning ? 'Girando...' : 'Girar Ruleta'}

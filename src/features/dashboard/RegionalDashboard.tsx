@@ -2,6 +2,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTournamentStore } from '../../store';
 import { initialRegions } from '../../data/regions';
 import { initialMunicipalities } from '../../data/municipalities';
+import ExportPanel from '../exports/ExportPanel';
+import { exportToCSV, exportToJSON } from '../../lib/utils/exportUtils';
 
 export default function RegionalDashboard() {
   const { regionId } = useParams();
@@ -9,6 +11,7 @@ export default function RegionalDashboard() {
 
   const getCompletedMunicipalResultsByRegion = useTournamentStore(state => state.getCompletedMunicipalResultsByRegion);
   const getRegionReadiness = useTournamentStore(state => state.getRegionReadiness);
+  const completedRegionalResults = useTournamentStore(state => state.completedRegionalResults);
 
   if (!regionId) return null;
 
@@ -148,6 +151,24 @@ export default function RegionalDashboard() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div className="mt-8 space-y-4">
+        <h3 className="text-2xl font-heading font-bold mb-4">Exportaciones Regionales</h3>
+        <ExportPanel 
+          title={`Resultados de ${region.name}`} 
+          description="Exporta el resultado oficial de esta región."
+          onExportCSV={() => exportToCSV(`resultado_${region.id}`, completedRegionalResults.filter(r => r.region_id === region.id))}
+          onExportJSON={() => exportToJSON(`resultado_${region.id}`, completedRegionalResults.filter(r => r.region_id === region.id))}
+          disabled={!completedRegionalResults.some(r => r.region_id === region.id)}
+        />
+        <ExportPanel 
+          title="Avance Municipal de la Región" 
+          description="Exporta el detalle de los campeones y subcampeones de cada municipio de esta región."
+          onExportCSV={() => exportToCSV(`municipios_${region.id}`, completedResults)}
+          onExportJSON={() => exportToJSON(`municipios_${region.id}`, completedResults)}
+          disabled={completedResults.length === 0}
+        />
       </div>
     </div>
   );

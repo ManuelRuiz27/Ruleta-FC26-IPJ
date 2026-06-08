@@ -3,10 +3,13 @@ import { Outlet, Link } from 'react-router-dom';
 export default function Layout() {
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] font-sans">
-      <header className="border-b border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-4 flex items-center justify-between">
-        <h1 className="text-[var(--color-heading)] font-heading font-bold text-xl tracking-tight">
-          Mundial FC 26
-        </h1>
+      <header className="border-b border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-4 flex items-center justify-between shadow-md">
+        <div className="flex items-center gap-4">
+          <img src="/icono oficial/Recurso 6.png" alt="Instituto Potosino de la Juventud" className="h-10" />
+          <h1 className="text-[var(--color-heading)] font-heading font-bold text-xl tracking-tight hidden sm:block border-l pl-4 border-[var(--color-border)]">
+            Mundial FC 26
+          </h1>
+        </div>
         <nav className="space-x-4">
           <Link to="/estatal/dashboard" className="text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-colors">Estatal</Link>
           {/* Link temporal para pruebas */}

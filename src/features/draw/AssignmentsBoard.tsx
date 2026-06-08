@@ -5,10 +5,16 @@ export default function AssignmentsBoard() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
-  const participants = useTournamentStore(state => state.getOrderedParticipants());
-  const assignments = useTournamentStore(state => state.getAssignmentsForCurrentSession());
-  const teams = useTournamentStore(state => state.teams);
   const currentSession = useTournamentStore(state => state.currentSession);
+  const allParticipants = useTournamentStore(state => state.participants);
+  const allAssignments = useTournamentStore(state => state.assignments);
+  const teams = useTournamentStore(state => state.teams);
+
+  const participants = allParticipants
+    .filter(p => p.session_id === currentSession?.id)
+    .sort((a, b) => (a.turn_order || 0) - (b.turn_order || 0));
+  
+  const assignments = allAssignments.filter(a => a.session_id === currentSession?.id);
 
   if (participants.length === 0) {
     return (
@@ -38,7 +44,7 @@ export default function AssignmentsBoard() {
               {id && (
                 <button 
                   onClick={() => navigate(`/municipal/${id}/bracket`)}
-                  className="bg-[var(--color-primary)] text-white px-4 py-1.5 rounded-[2px] text-sm font-medium hover:bg-opacity-90 transition-opacity"
+                  className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-4 py-1.5 rounded-[2px] text-sm font-medium hover:bg-opacity-90 transition-opacity"
                 >
                   Ir a Bracket Municipal
                 </button>
@@ -48,7 +54,7 @@ export default function AssignmentsBoard() {
           {currentSession && currentSession.status !== 'draw_completed' && id && (
             <button 
               onClick={() => navigate(`/municipal/${id}/ruleta`)}
-              className="bg-[var(--color-primary)] text-white px-4 py-1.5 rounded-[2px] text-sm font-medium hover:bg-opacity-90 transition-opacity"
+              className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-4 py-1.5 rounded-[2px] text-sm font-medium hover:bg-opacity-90 transition-opacity"
             >
               Volver a Ruleta
             </button>

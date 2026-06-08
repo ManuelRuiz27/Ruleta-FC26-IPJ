@@ -6,7 +6,8 @@ export default function MatchScoreCapture() {
   const { id, regionId, matchId } = useParams<{ id?: string, regionId?: string, matchId: string }>();
   const navigate = useNavigate();
   
-  const backUrl = regionId ? `/regional/${regionId}/bracket` : `/municipal/${id}/bracket`;
+  const isState = window.location.pathname.includes('/estatal');
+  const backUrl = isState ? '/estatal/bracket' : regionId ? `/regional/${regionId}/bracket` : `/municipal/${id}/bracket`;
   
   const getMatchById = useTournamentStore(state => state.getMatchById);
   const participants = useTournamentStore(state => state.participants);
@@ -30,7 +31,7 @@ export default function MatchScoreCapture() {
         <h2 className="text-xl font-heading font-bold text-[var(--color-danger)] mb-2">Partido no encontrado</h2>
         <button 
           onClick={() => navigate(backUrl)}
-          className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-[2px] font-medium mt-4"
+          className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-4 py-2 rounded-[2px] font-medium mt-4"
         >
           Volver al Bracket
         </button>
@@ -50,7 +51,7 @@ export default function MatchScoreCapture() {
         <p className="text-[var(--color-muted)] mb-4">Aún falta definir a los jugadores para este partido.</p>
         <button 
           onClick={() => navigate(backUrl)}
-          className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-[2px] font-medium"
+          className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-4 py-2 rounded-[2px] font-medium"
         >
           Volver al Bracket
         </button>
@@ -71,7 +72,7 @@ export default function MatchScoreCapture() {
         <div>
           <button 
             onClick={() => navigate(backUrl)}
-            className="w-full bg-[var(--color-primary)] text-white px-4 py-2 rounded-[2px] font-medium"
+            className="w-full bg-[var(--color-primary)] text-[var(--color-primary-content)] px-4 py-2 rounded-[2px] font-medium"
           >
             Volver al Bracket
           </button>
@@ -87,7 +88,7 @@ export default function MatchScoreCapture() {
         <p className="text-[var(--color-muted)] mb-6">Aún falta que se resuelvan los partidos anteriores para conocer a ambos contrincantes.</p>
         <button 
           onClick={() => navigate(backUrl)}
-          className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-[2px] font-medium"
+          className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-4 py-2 rounded-[2px] font-medium"
         >
           Volver al Bracket
         </button>
@@ -124,7 +125,7 @@ export default function MatchScoreCapture() {
 
         <button 
           onClick={() => navigate(backUrl)}
-          className="w-full bg-[var(--color-primary)] text-white px-4 py-2 rounded-[2px] font-medium"
+          className="w-full bg-[var(--color-primary)] text-[var(--color-primary-content)] px-4 py-2 rounded-[2px] font-medium"
         >
           Volver al Bracket
         </button>
@@ -137,7 +138,7 @@ export default function MatchScoreCapture() {
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6">
         <h2 className="text-xl font-heading font-bold mb-2">Error</h2>
         <p className="text-[var(--color-muted)] mb-4">Faltan datos del rival.</p>
-        <button onClick={() => navigate(backUrl)} className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-[2px] font-medium">Volver</button>
+        <button onClick={() => navigate(backUrl)} className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-4 py-2 rounded-[2px] font-medium">Volver</button>
       </div>
     );
   }
@@ -288,7 +289,7 @@ export default function MatchScoreCapture() {
           </button>
           <button 
             type="submit"
-            className="flex-1 bg-[var(--color-primary)] text-white py-3 rounded-[2px] font-bold shadow-[0_0_15px_rgba(102,58,243,0.3)] hover:bg-opacity-90 transition-opacity"
+            className="flex-1 bg-[var(--color-primary)] text-[var(--color-primary-content)] py-3 rounded-[2px] font-bold shadow-[0_0_15px_rgba(102,58,243,0.3)] hover:bg-opacity-90 transition-opacity"
           >
             Guardar resultado
           </button>

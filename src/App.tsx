@@ -11,6 +11,8 @@ import MatchScoreCapture from './features/bracket/MatchScoreCapture';
 import RegionalDashboard from './features/dashboard/RegionalDashboard';
 import RegionalResolution from './features/dashboard/RegionalResolution';
 import RegionalBracket from './features/bracket/RegionalBracket';
+import StateBracket from './features/bracket/StateBracket';
+import StateResolution from './features/dashboard/StateResolution';
 
 function App() {
   return (
@@ -20,6 +22,9 @@ function App() {
         
         <Route element={<Layout />}>
           <Route path="/estatal/dashboard" element={<EstatalDashboard />} />
+          <Route path="/estatal/resolucion" element={<StateResolution />} />
+          <Route path="/estatal/bracket" element={<StateBracket />} />
+          <Route path="/estatal/partido/:matchId" element={<MatchScoreCapture />} />
           <Route path="/regional/:regionId" element={<RegionalDashboard />} />
           <Route path="/regional/:regionId/resolucion" element={<RegionalResolution />} />
           <Route path="/regional/:regionId/bracket" element={<RegionalBracket />} />

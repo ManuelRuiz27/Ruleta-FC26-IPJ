@@ -45,7 +45,7 @@ export default function MunicipalSetup() {
             <div className="col-span-2">
               <div className="text-sm text-[var(--color-muted)] font-mono mb-1">Estado de Sesión</div>
               <div className="font-bold">
-                <span className={`inline-flex items-center px-2 py-1 rounded-[6px] text-xs font-medium ${isCompleted ? 'bg-[var(--color-success)] text-white' : sessionExists ? 'bg-[var(--color-primary)] text-white' : 'bg-[#3f4959] text-[var(--color-text)]'}`}>
+                <span className={`inline-flex items-center px-2 py-1 rounded-[6px] text-xs font-medium ${isCompleted ? 'bg-[var(--color-success)] text-white' : sessionExists ? 'bg-[var(--color-primary)] text-[var(--color-primary-content)]' : 'bg-[#3f4959] text-[var(--color-text)]'}`}>
                   {isCompleted ? 'Eliminatoria municipal cerrada' : sessionStatus}
                 </span>
               </div>
@@ -78,14 +78,14 @@ export default function MunicipalSetup() {
           {isCompleted ? (
             <button 
               onClick={() => navigate(`/municipal/${municipality.id}/bracket`)}
-              className="bg-[var(--color-primary)] text-white px-6 py-2 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity"
+              className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-6 py-2 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity"
             >
               Ver bracket
             </button>
           ) : (
             <button 
               onClick={() => navigate(`/municipal/${municipality.id}/registro`)}
-              className="bg-[var(--color-primary)] text-white px-6 py-2 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity"
+              className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-6 py-2 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity"
             >
               Registrar participantes
             </button>

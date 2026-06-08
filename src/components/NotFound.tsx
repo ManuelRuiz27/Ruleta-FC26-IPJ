@@ -7,7 +7,7 @@ export default function NotFound() {
       <p className="text-xl text-[var(--color-muted)] mb-8">Página no encontrada</p>
       <Link 
         to="/estatal/dashboard" 
-        className="bg-[var(--color-primary)] text-white px-6 py-3 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity"
+        className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-6 py-3 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity"
       >
         Volver al Dashboard Estatal
       </Link>

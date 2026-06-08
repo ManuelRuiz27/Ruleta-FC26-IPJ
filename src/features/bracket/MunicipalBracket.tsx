@@ -1,5 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTournamentStore } from '../../store';
+import ExportPanel from '../exports/ExportPanel';
+import { exportToCSV, exportToJSON } from '../../lib/utils/exportUtils';
 
 export default function MunicipalBracket() {
   const { id } = useParams<{ id: string }>();
@@ -7,12 +9,16 @@ export default function MunicipalBracket() {
   
   const currentSession = useTournamentStore(state => state.currentSession);
   const bracket = useTournamentStore(state => state.bracket);
-  const matchesByRound = useTournamentStore(state => state.getMatchesByRound());
+  const allMatches = useTournamentStore(state => state.matches);
+  const getMatchesByRound = useTournamentStore(state => state.getMatchesByRound);
+  const matchesByRound = getMatchesByRound();
+  
   const participants = useTournamentStore(state => state.participants);
   const generateMunicipalBracket = useTournamentStore(state => state.generateMunicipalBracket);
   const getParticipantTeam = useTournamentStore(state => state.getParticipantTeam);
   const getChampionAndRunnerUp = useTournamentStore(state => state.getChampionAndRunnerUp);
   const getQualifiedPlayersForCurrentSession = useTournamentStore(state => state.getQualifiedPlayersForCurrentSession);
+  const completedMunicipalResults = useTournamentStore(state => state.completedMunicipalResults);
 
   if (!currentSession) {
     return (
@@ -21,7 +27,7 @@ export default function MunicipalBracket() {
         <p className="text-[var(--color-muted)] mb-4">Debes iniciar y completar el sorteo primero.</p>
         <button 
           onClick={() => navigate(`/municipal/${id}/registro`)}
-          className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-[2px] font-medium"
+          className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-4 py-2 rounded-[2px] font-medium"
         >
           Ir a Registro
         </button>
@@ -37,7 +43,7 @@ export default function MunicipalBracket() {
         <p className="text-[var(--color-muted)] mb-4">Primero debe completarse el sorteo de selecciones.</p>
         <button 
           onClick={() => navigate(`/municipal/${id}/ruleta`)}
-          className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-[2px] font-medium"
+          className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-4 py-2 rounded-[2px] font-medium"
         >
           Ir a Ruleta
         </button>
@@ -52,7 +58,7 @@ export default function MunicipalBracket() {
         <p className="text-[var(--color-muted)] mb-8">El sorteo ha concluido. Es momento de generar las llaves del torneo.</p>
         <button 
           onClick={() => generateMunicipalBracket()}
-          className="bg-[var(--color-primary)] text-white px-8 py-3 rounded-[2px] font-bold text-lg hover:bg-opacity-90 transition-opacity"
+          className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-8 py-3 rounded-[2px] font-bold text-lg hover:bg-opacity-90 transition-opacity"
         >
           Generar bracket municipal
         </button>
@@ -79,32 +85,55 @@ export default function MunicipalBracket() {
         </span>
       </div>
 
-      {currentSession.status === 'completed' && champion && (
-        <div className="mb-8 bg-[rgba(38,150,132,0.1)] border border-[var(--color-success)] rounded-xl p-6 text-center shadow-[0_0_20px_rgba(38,150,132,0.2)] animate-fade-in">
-          <h3 className="text-2xl font-bold text-[var(--color-success)] mb-2 uppercase tracking-widest font-heading">Campeón Municipal</h3>
-          <div className="text-3xl font-bold text-white mb-2">{champion.display_name}</div>
-          <div className="text-[var(--color-accent)] font-bold">{getParticipantTeam(champion.id)?.name}</div>
+      {currentSession.status === 'completed' && champion && (() => {
+        const champTeam = getParticipantTeam(champion.id);
+        const runnerTeam = runnerUp ? getParticipantTeam(runnerUp.id) : null;
+        return (
+        <div className="mb-8 bg-[rgba(38,150,132,0.1)] border border-[var(--color-success)] rounded-xl p-8 text-center shadow-[0_0_30px_rgba(38,150,132,0.3)] animate-fade-in relative overflow-hidden">
+          <div className="absolute top-0 left-1/2 -ml-[100px] w-[200px] h-[200px] bg-[var(--color-success)] opacity-20 blur-[80px] rounded-full pointer-events-none" />
+          
+          <h3 className="text-2xl font-bold text-[var(--color-success)] mb-4 uppercase tracking-widest font-heading drop-shadow-md">Campeón Municipal</h3>
+          
+          <div className="flex flex-col items-center justify-center mb-6 animate-[bounce_1s_ease-in-out_infinite] hover:animate-none transition-transform hover:scale-110">
+            {champTeam?.flag_asset_url && (
+              <img src={champTeam.flag_asset_url} alt={champTeam.name} className="w-24 h-16 rounded shadow-[0_0_15px_rgba(255,255,255,0.2)] border-2 border-white/20 mb-3 object-cover" />
+            )}
+            <div className="text-4xl font-bold text-white mb-1 drop-shadow-lg">{champion.display_name}</div>
+            <div className="text-xl text-[var(--color-accent)] font-bold">{champTeam?.name}</div>
+          </div>
           
           {runnerUp && (
-            <div className="mt-6 pt-6 border-t border-[rgba(38,150,132,0.2)]">
-              <div className="text-sm text-[var(--color-muted)] uppercase tracking-wider mb-1">Subcampeón</div>
-              <div className="text-lg font-bold text-[var(--color-text)]">{runnerUp.display_name}</div>
-              <div className="text-sm text-[var(--color-accent)] font-medium">{getParticipantTeam(runnerUp.id)?.name}</div>
+            <div className="mt-8 pt-6 border-t border-[rgba(38,150,132,0.3)]">
+              <div className="text-sm text-[var(--color-muted)] uppercase tracking-wider mb-3">Subcampeón</div>
+              <div className="flex flex-col items-center justify-center transition-transform hover:scale-105">
+                {runnerTeam?.flag_asset_url && (
+                  <img src={runnerTeam.flag_asset_url} alt={runnerTeam.name} className="w-16 h-10 rounded shadow-md border border-white/20 mb-2 object-cover" />
+                )}
+                <div className="text-xl font-bold text-[var(--color-text)]">{runnerUp.display_name}</div>
+                <div className="text-md text-[var(--color-accent)] font-medium">{runnerTeam?.name}</div>
+              </div>
             </div>
           )}
 
           {qualifiedPlayers.length > 0 && (
-            <div className="mt-8 pt-6 border-t border-[rgba(38,150,132,0.2)] text-left">
-              <h4 className="text-sm text-[var(--color-success)] uppercase tracking-wider mb-4 font-bold">Clasificados regionales generados</h4>
+            <div className="mt-8 pt-8 border-t border-[rgba(38,150,132,0.3)] text-left relative z-10">
+              <h4 className="text-sm text-[var(--color-success)] uppercase tracking-wider mb-4 font-bold flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[var(--color-success)] animate-pulse" /> Clasificados regionales generados
+              </h4>
               <div className="grid grid-cols-2 gap-4">
                 {qualifiedPlayers.map(qp => {
                   const p = participants.find(p => p.id === qp.participant_id);
                   const t = getParticipantTeam(qp.participant_id);
                   return (
-                    <div key={qp.id} className="bg-[#1a1d24] border border-[var(--color-border)] rounded-lg p-3">
-                      <div className="text-xs text-[var(--color-muted)] font-mono uppercase mb-1">{qp.rank === 'champion' ? 'Campeón' : 'Subcampeón'}</div>
-                      <div className="font-bold text-white text-sm">{p?.display_name}</div>
-                      <div className="text-[var(--color-accent)] font-medium text-xs">{t?.name}</div>
+                    <div key={qp.id} className="bg-[#1a1d24] border border-[var(--color-border)] rounded-lg p-4 flex items-center gap-4 hover:border-[var(--color-success)] transition-colors group cursor-default">
+                      {t?.flag_asset_url && (
+                        <img src={t.flag_asset_url} alt={t.name} className="w-12 h-8 rounded-sm object-cover border border-white/10 group-hover:scale-110 transition-transform" />
+                      )}
+                      <div>
+                        <div className="text-xs text-[var(--color-muted)] font-mono uppercase mb-1">{qp.rank === 'champion' ? '🏆 Campeón' : '🥈 Subcampeón'}</div>
+                        <div className="font-bold text-white text-md">{p?.display_name}</div>
+                        <div className="text-[var(--color-accent)] font-medium text-xs">{t?.name}</div>
+                      </div>
                     </div>
                   );
                 })}
@@ -112,7 +141,8 @@ export default function MunicipalBracket() {
             </div>
           )}
         </div>
-      )}
+        );
+      })}
 
       <div className="grid grid-cols-4 gap-4 mb-8">
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 flex flex-col items-center">
@@ -158,7 +188,7 @@ export default function MunicipalBracket() {
                       <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 rounded ${
                         match.status === 'completed' && !match.player_b_id ? 'bg-[var(--color-accent)] text-[#05060f]' :
                         match.status === 'completed' ? 'bg-[var(--color-success)] text-white' :
-                        match.status === 'ready' ? 'bg-[var(--color-primary)] text-white' :
+                        match.status === 'ready' ? 'bg-[var(--color-primary)] text-[var(--color-primary-content)]' :
                         isBye ? 'bg-[var(--color-accent)] text-[#05060f]' : 'bg-[#3f4959] text-white'
                       }`}>
                         {match.status === 'completed' && !match.player_b_id ? 'BYE Automático' : isBye && match.status !== 'completed' ? 'BYE' : match.status}
@@ -167,9 +197,14 @@ export default function MunicipalBracket() {
 
                     <div className="space-y-3 mb-6">
                       <div className="flex justify-between items-center bg-[var(--color-bg)] p-2 rounded border border-[var(--color-border)] border-l-4 border-l-[var(--color-primary)]">
-                        <div className="flex-1 truncate">
-                          <span className="font-medium">{pA?.display_name || 'Pendiente'}</span>
-                          <div className="text-xs text-[var(--color-accent)] font-bold">{teamA?.name || ''}</div>
+                        <div className="flex items-center gap-3 flex-1 truncate">
+                          {teamA?.flag_asset_url && (
+                            <img src={teamA.flag_asset_url} alt={teamA.name} className="w-7 h-5 rounded-sm object-cover border border-white/10 shrink-0" />
+                          )}
+                          <div className="flex-1 truncate">
+                            <span className="font-medium">{pA?.display_name || 'Pendiente'}</span>
+                            <div className="text-xs text-[var(--color-accent)] font-bold">{teamA?.name || ''}</div>
+                          </div>
                         </div>
                         {match.status === 'completed' && match.regular_score_a !== null && (
                           <div className="text-xl font-bold ml-4">{match.regular_score_a}</div>
@@ -182,9 +217,14 @@ export default function MunicipalBracket() {
                         </div>
                       ) : (
                         <div className="flex justify-between items-center bg-[var(--color-bg)] p-2 rounded border border-[var(--color-border)] border-l-4 border-l-[#3f4959]">
-                          <div className="flex-1 truncate">
-                            <span className="font-medium">{pB?.display_name || 'Pendiente'}</span>
-                            <div className="text-xs text-[var(--color-accent)] font-bold">{teamB?.name || ''}</div>
+                          <div className="flex items-center gap-3 flex-1 truncate">
+                            {teamB?.flag_asset_url && (
+                              <img src={teamB.flag_asset_url} alt={teamB.name} className="w-7 h-5 rounded-sm object-cover border border-white/10 shrink-0" />
+                            )}
+                            <div className="flex-1 truncate">
+                              <span className="font-medium">{pB?.display_name || 'Pendiente'}</span>
+                              <div className="text-xs text-[var(--color-accent)] font-bold">{teamB?.name || ''}</div>
+                            </div>
                           </div>
                           {match.status === 'completed' && match.regular_score_b !== null && (
                             <div className="text-xl font-bold ml-4">{match.regular_score_b}</div>
@@ -231,6 +271,24 @@ export default function MunicipalBracket() {
           </div>
         )})}
       </div>
+
+      {currentSession.status === 'completed' && (
+        <div className="mt-8">
+          <ExportPanel 
+            title="Exportar Resultado Municipal" 
+            description="Descarga el resultado oficial y detalles de los clasificados de este municipio."
+            onExportCSV={() => {
+              const res = completedMunicipalResults.find(r => r.municipality_id === id);
+              if (res) exportToCSV(`resultado_municipal_${id}`, [res]);
+            }}
+            onExportJSON={() => {
+              const res = completedMunicipalResults.find(r => r.municipality_id === id);
+              if (res) exportToJSON(`resultado_municipal_${id}`, [res]);
+            }}
+            disabled={!completedMunicipalResults.some(r => r.municipality_id === id)}
+          />
+        </div>
+      )}
     </div>
   );
 }

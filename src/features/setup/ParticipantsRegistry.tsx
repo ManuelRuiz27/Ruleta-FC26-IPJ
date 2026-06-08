@@ -73,7 +73,7 @@ export default function ParticipantsRegistry() {
 
         <button 
           onClick={handleValidate}
-          className="bg-[var(--color-primary)] text-white px-6 py-2 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity"
+          className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-6 py-2 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity"
         >
           Validar y Continuar
         </button>

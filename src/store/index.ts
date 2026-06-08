@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { 
-  Region, Municipality, Team, DrawSession, Participant, Assignment, 
-  Bracket, Match, RoundType, QualifiedPlayer, CompletedMunicipalResult, CompletedRegionalResult, TeamReassignment 
+  Region, Municipality, Team, DrawSession, Participant, Assignment,
+  Bracket, Match, RoundType, QualifiedPlayer, CompletedMunicipalResult, CompletedRegionalResult, CompletedStateResult, TeamReassignment 
 } from '../types';
 import { initialRegions } from '../data/regions';
 import { initialMunicipalities } from '../data/municipalities';
@@ -29,6 +29,7 @@ interface TournamentState {
   qualifiedPlayers: QualifiedPlayer[];
   completedMunicipalResults: CompletedMunicipalResult[];
   completedRegionalResults: CompletedRegionalResult[];
+  completedStateResults: CompletedStateResult[];
   teamReassignments: TeamReassignment[];
 
   prepareDraftSessionForDraw: () => void;
@@ -36,6 +37,7 @@ interface TournamentState {
   assignRandomTeamToParticipant: (participantId: string) => Assignment;
   generateMunicipalBracket: () => void;
   generateRegionalBracket: () => void;
+  generateStateBracket: () => void;
   submitMatchResult: (input: {
     matchId: string;
     regularScoreA: number;
@@ -50,6 +52,9 @@ interface TournamentState {
   createMunicipalQualifiedPlayers: () => void;
   createCompletedMunicipalResult: () => void;
   createCompletedRegionalResult: () => void;
+  createCompletedStateResult: () => void;
+  createStateSession: () => DrawSession;
+  createStateQualifiedPlayers: () => void;
   resolveDuplicateTeam: (input: { qualifiedPlayerId: string; newTeamId: string; keptByQualifiedPlayerId: string | null; reason: string; }) => void;
   
   setParticipants: (participants: Participant[]) => void;
@@ -79,7 +84,9 @@ interface TournamentState {
   getPendingParticipants: () => Participant[];
   getQualifiedPlayersForCurrentSession: () => QualifiedPlayer[];
   getQualifiedPlayersByRegion: (regionId: string) => QualifiedPlayer[];
+  getQualifiedPlayersState: () => QualifiedPlayer[];
   getAllCompletedMunicipalResults: () => CompletedMunicipalResult[];
+  getAllCompletedRegionalResults: () => CompletedRegionalResult[];
   getCompletedMunicipalResultsByRegion: (regionId: string) => CompletedMunicipalResult[];
   getDuplicateTeamsByRegion: (regionId: string) => Array<{
     team_id: string;
@@ -94,7 +101,21 @@ interface TournamentState {
       team_name: string;
     }>;
   }>;
+  getDuplicateTeamsState: () => Array<{
+    team_id: string;
+    team_name: string;
+    occurrences: Array<{
+      qualified_player_id: string;
+      region_id: string;
+      region_name: string;
+      participant_name: string;
+      rank: 'champion' | 'runner_up';
+      team_id: string;
+      team_name: string;
+    }>;
+  }>;
   getAvailableTeamsForRegion: (regionId: string) => Team[];
+  getAvailableTeamsForState: () => Team[];
   getRegionReadiness: (regionId: string) => {
     isReady: boolean;
     totalMunicipalities: number;
@@ -103,6 +124,15 @@ interface TournamentState {
     actualQualifiedPlayers: number;
     duplicateGroups: number;
     pendingMunicipalities: number;
+  };
+  getStateReadiness: () => {
+    isReady: boolean;
+    totalRegions: number;
+    completedRegions: number;
+    expectedQualifiedPlayers: number;
+    actualQualifiedPlayers: number;
+    duplicateGroups: number;
+    pendingRegions: number;
   };
   getAvailableTeams: () => Team[];
   validateParticipantNames: (names: string[]) => { valid: boolean; errors: string[] };
@@ -123,6 +153,7 @@ export const useTournamentStore = create<TournamentState>()(
       qualifiedPlayers: [],
       completedMunicipalResults: [],
       completedRegionalResults: [],
+      completedStateResults: [],
       teamReassignments: [],
 
       setCurrentSession: (session) => set({ currentSession: session }),
@@ -761,6 +792,315 @@ export const useTournamentStore = create<TournamentState>()(
         set(state => ({ completedRegionalResults: [...state.completedRegionalResults, result] }));
       },
 
+      createStateQualifiedPlayers: () => {
+        const completedRegions = get().completedRegionalResults;
+        const newPlayers: QualifiedPlayer[] = [];
+        
+        for (const res of completedRegions) {
+          if (!get().qualifiedPlayers.some(qp => qp.source_session_id === res.source_session_id && qp.participant_id === res.champion_participant_id && qp.target_stage === 'state')) {
+            newPlayers.push({
+              id: crypto.randomUUID(),
+              source_session_id: res.source_session_id,
+              target_stage: 'state',
+              participant_id: res.champion_participant_id,
+              municipality_id: null,
+              region_id: res.region_id,
+              team_id: res.champion_team_id,
+              rank: 'champion',
+              is_active: true,
+              created_at: new Date().toISOString()
+            });
+          }
+          if (!get().qualifiedPlayers.some(qp => qp.source_session_id === res.source_session_id && qp.participant_id === res.runner_up_participant_id && qp.target_stage === 'state')) {
+            newPlayers.push({
+              id: crypto.randomUUID(),
+              source_session_id: res.source_session_id,
+              target_stage: 'state',
+              participant_id: res.runner_up_participant_id,
+              municipality_id: null,
+              region_id: res.region_id,
+              team_id: res.runner_up_team_id,
+              rank: 'runner_up',
+              is_active: true,
+              created_at: new Date().toISOString()
+            });
+          }
+        }
+        
+        if (newPlayers.length > 0) {
+          set(state => ({ qualifiedPlayers: [...state.qualifiedPlayers, ...newPlayers] }));
+        }
+      },
+
+      createStateSession: () => {
+        const readiness = get().getStateReadiness();
+        if (!readiness.isReady) throw new Error("El estado no está listo para iniciar bracket.");
+
+        const id = crypto.randomUUID();
+        const session: DrawSession = {
+          id,
+          stage: 'state',
+          status: 'draw_completed',
+          municipality_id: null,
+          region_id: null,
+          name: `Sorteo Estatal`,
+          participant_min: 2,
+          participant_max: 64,
+          allow_duplicate_teams: false,
+          created_by: null,
+          started_at: new Date().toISOString(),
+          completed_at: new Date().toISOString(),
+          locked_at: null,
+          deleted_at: null,
+          created_at: new Date().toISOString()
+        };
+
+        const activeQualified = get().getQualifiedPlayersState().filter(qp => qp.is_active);
+        const newParticipants: Participant[] = [];
+        const newAssignments: Assignment[] = [];
+
+        activeQualified.forEach(qp => {
+          const originalParticipant = get().participants.find(p => p.id === qp.participant_id);
+          const pName = originalParticipant ? originalParticipant.display_name : 'Desconocido';
+          const pId = crypto.randomUUID();
+          
+          newParticipants.push({
+            id: pId,
+            session_id: session.id,
+            source_qualified_player_id: qp.id,
+            display_name: pName,
+            turn_order: null,
+            status: 'registered',
+            sync_status: 'synced',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            deleted_at: null
+          });
+
+          newAssignments.push({
+            id: crypto.randomUUID(),
+            session_id: session.id,
+            participant_id: pId,
+            team_id: qp.team_id,
+            source: 'state_reassignment',
+            assigned_at: new Date().toISOString(),
+            created_by: null,
+            sync_status: 'synced'
+          });
+        });
+
+        set({
+          currentSession: session,
+          participants: newParticipants,
+          assignments: newAssignments,
+          bracket: null,
+          matches: []
+        });
+
+        return session;
+      },
+
+      generateStateBracket: () => {
+        const session = get().currentSession;
+        if (!session || session.stage !== 'state') throw new Error("No hay sesión estatal activa.");
+        if (session.status !== 'draw_completed') throw new Error("La sesión no está en estado válido.");
+
+        const participants = get().participants.filter(p => p.session_id === session.id);
+        const N = participants.length;
+        if (N < 2) throw new Error("Se requieren al menos 2 participantes.");
+
+        let bracketSize = 2;
+        while (bracketSize < N) bracketSize *= 2;
+        const byes = bracketSize - N;
+
+        const bracket: Bracket = {
+          id: crypto.randomUUID(),
+          session_id: session.id,
+          participant_count: N,
+          bracket_size: bracketSize,
+          bye_count: byes,
+          status: 'active',
+          generated_by: null,
+          generated_at: new Date().toISOString(),
+          locked_at: null
+        };
+
+        const roundsMap: Record<number, RoundType> = {
+          2: 'final', 4: 'semifinal', 8: 'quarterfinal',
+          16: 'round_16', 32: 'round_32', 64: 'round_64'
+        };
+        
+        let currentSize = bracketSize;
+        const activeRounds: RoundType[] = [];
+        while (currentSize >= 2) {
+          activeRounds.push(roundsMap[currentSize] || 'round_64');
+          currentSize /= 2;
+        }
+
+        const matches: Match[] = [];
+        let matchNumber = 1;
+        
+        let previousRoundMatches: Match[] = [];
+
+        for (const round of [...activeRounds].reverse()) {
+          const roundMatchesCount = round === 'final' ? 1 : 
+                                   round === 'semifinal' ? 2 : 
+                                   round === 'quarterfinal' ? 4 : 
+                                   round === 'round_16' ? 8 : 
+                                   round === 'round_32' ? 16 : 32;
+          
+          const currentRoundMatches: Match[] = [];
+
+          for (let i = 0; i < roundMatchesCount; i++) {
+            const match: Match = {
+              id: crypto.randomUUID(),
+              bracket_id: bracket.id,
+              session_id: session.id,
+              round,
+              match_number: matchNumber++,
+              next_match_id: null,
+              player_a_id: null,
+              team_a_id: null,
+              player_b_id: null,
+              team_b_id: null,
+              winner_id: null,
+              loser_id: null,
+              regular_score_a: null,
+              regular_score_b: null,
+              extra_time_played: false,
+              penalties_played: false,
+              penalties_score_a: null,
+              penalties_score_b: null,
+              status: 'pending',
+              completed_by: null,
+              completed_at: null,
+              locked_at: null,
+              deleted_at: null,
+              created_at: new Date().toISOString()
+            };
+            currentRoundMatches.push(match);
+            matches.push(match);
+          }
+
+          if (previousRoundMatches.length > 0) {
+            for (let i = 0; i < previousRoundMatches.length; i++) {
+              previousRoundMatches[i].next_match_id = currentRoundMatches[Math.floor(i / 2)].id;
+            }
+          }
+
+          previousRoundMatches = currentRoundMatches;
+        }
+
+        const initialRoundName = activeRounds[0];
+        const initialMatches = matches.filter(m => m.round === initialRoundName);
+
+        const shuffled = [...participants].sort(() => Math.random() - 0.5);
+        let pIndex = 0;
+
+        for (let i = 0; i < initialMatches.length; i++) {
+          if (pIndex < shuffled.length) {
+            initialMatches[i].player_a_id = shuffled[pIndex].id;
+            const assignment = get().assignments.find(a => a.participant_id === shuffled[pIndex].id);
+            initialMatches[i].team_a_id = assignment ? assignment.team_id : null;
+            pIndex++;
+          }
+          if (pIndex < shuffled.length && i >= byes) {
+            initialMatches[i].player_b_id = shuffled[pIndex].id;
+            const assignment = get().assignments.find(a => a.participant_id === shuffled[pIndex].id);
+            initialMatches[i].team_b_id = assignment ? assignment.team_id : null;
+            initialMatches[i].status = 'ready';
+            pIndex++;
+          } else if (pIndex >= shuffled.length || i < byes) {
+            initialMatches[i].status = 'completed';
+            initialMatches[i].winner_id = initialMatches[i].player_a_id;
+            const nextMatchId = initialMatches[i].next_match_id;
+            if (nextMatchId) {
+              const nextMatch = matches.find(m => m.id === nextMatchId);
+              if (nextMatch) {
+                if (!nextMatch.player_a_id) {
+                  nextMatch.player_a_id = initialMatches[i].winner_id;
+                  nextMatch.team_a_id = initialMatches[i].team_a_id;
+                } else {
+                  nextMatch.player_b_id = initialMatches[i].winner_id;
+                  nextMatch.team_b_id = initialMatches[i].team_a_id;
+                  nextMatch.status = 'ready';
+                }
+              }
+            }
+          }
+        }
+
+        set({ 
+          bracket, 
+          matches, 
+          currentSession: { ...session, status: 'bracket_ready' }
+        });
+      },
+
+      createCompletedStateResult: () => {
+        const session = get().currentSession;
+        if (!session || session.stage !== 'state') return;
+
+        const { champion, runnerUp } = get().getChampionAndRunnerUp();
+        if (!champion || !runnerUp) return;
+
+        const championAssignment = get().getParticipantAssignment(champion.id);
+        const runnerUpAssignment = get().getParticipantAssignment(runnerUp.id);
+        if (!championAssignment || !runnerUpAssignment) return;
+
+        const championTeam = get().getTeamById(championAssignment.team_id);
+        const runnerUpTeam = get().getTeamById(runnerUpAssignment.team_id);
+        if (!championTeam || !runnerUpTeam) return;
+
+        // Since it's state, region can be looked up from original qualified player
+        const championQp = get().qualifiedPlayers.find(q => q.id === champion.source_qualified_player_id);
+        const runnerUpQp = get().qualifiedPlayers.find(q => q.id === runnerUp.source_qualified_player_id);
+        
+        const championRegion = championQp ? get().getRegionById(championQp.region_id || '') : null;
+        const runnerUpRegion = runnerUpQp ? get().getRegionById(runnerUpQp.region_id || '') : null;
+
+        const bracket = get().bracket;
+        if (!bracket) return;
+
+        const finalMatch = get().matches.find(m => m.round === 'final');
+        if (!finalMatch) return;
+
+        let decisionMethod: CompletedStateResult['final_decision_method'] = 'unknown';
+        if (!finalMatch.player_b_id) decisionMethod = 'bye';
+        else if (finalMatch.penalties_played) decisionMethod = 'penalties';
+        else if (finalMatch.extra_time_played) decisionMethod = 'extra_time';
+        else if (finalMatch.regular_score_a != null && finalMatch.regular_score_b != null) decisionMethod = 'regular';
+
+        const result: CompletedStateResult = {
+          id: crypto.randomUUID(),
+          source_session_id: session.id,
+          completed_at: session.completed_at || new Date().toISOString(),
+          participant_count: bracket.participant_count,
+          bracket_size: bracket.bracket_size,
+          bye_count: bracket.bye_count,
+          champion_participant_id: champion.id,
+          champion_name: champion.display_name,
+          champion_team_id: championTeam.id,
+          champion_team_name: championTeam.name,
+          champion_region_name: championRegion ? championRegion.name : 'Desconocida',
+          runner_up_participant_id: runnerUp.id,
+          runner_up_name: runnerUp.display_name,
+          runner_up_team_id: runnerUpTeam.id,
+          runner_up_team_name: runnerUpTeam.name,
+          runner_up_region_name: runnerUpRegion ? runnerUpRegion.name : 'Desconocida',
+          final_match_id: finalMatch.id,
+          final_regular_score_champion: finalMatch.winner_id === finalMatch.player_a_id ? finalMatch.regular_score_a : finalMatch.regular_score_b,
+          final_regular_score_runner_up: finalMatch.loser_id === finalMatch.player_a_id ? finalMatch.regular_score_a : finalMatch.regular_score_b,
+          final_extra_time_played: finalMatch.extra_time_played,
+          final_penalties_played: finalMatch.penalties_played,
+          final_penalties_score_champion: finalMatch.winner_id === finalMatch.player_a_id ? finalMatch.penalties_score_a : finalMatch.penalties_score_b,
+          final_penalties_score_runner_up: finalMatch.loser_id === finalMatch.player_a_id ? finalMatch.penalties_score_a : finalMatch.penalties_score_b,
+          final_decision_method: decisionMethod
+        };
+
+        set(state => ({ completedStateResults: [...state.completedStateResults, result] }));
+      },
+
       resolveDuplicateTeam: (input) => {
         const { qualifiedPlayerId, newTeamId, keptByQualifiedPlayerId, reason } = input;
         const qp = get().qualifiedPlayers.find(q => q.id === qualifiedPlayerId);
@@ -771,9 +1111,9 @@ export const useTournamentStore = create<TournamentState>()(
         if (!newTeamId) throw new Error("El newTeamId es requerido.");
         if (qp.team_id === newTeamId) throw new Error("La nueva selección no puede ser igual a la anterior.");
         
-        const availableTeams = get().getAvailableTeamsForRegion(qp.region_id);
+        const availableTeams = qp.target_stage === 'state' ? get().getAvailableTeamsForState() : get().getAvailableTeamsForRegion(qp.region_id);
         if (!availableTeams.some(t => t.id === newTeamId)) {
-          throw new Error("La selección elegida ya está ocupada por otro clasificado activo en esta región.");
+          throw new Error(`La selección elegida ya está ocupada por otro clasificado activo en ${qp.target_stage === 'state' ? 'el estado' : 'esta región'}.`);
         }
 
         const previousTeamId = qp.team_id;
@@ -786,7 +1126,7 @@ export const useTournamentStore = create<TournamentState>()(
 
         const reassignment: TeamReassignment = {
           id: crypto.randomUUID(),
-          stage: 'regional',
+          stage: qp.target_stage,
           session_id: null,
           qualified_player_id: qualifiedPlayerId,
           previous_team_id: previousTeamId,
@@ -864,10 +1204,15 @@ export const useTournamentStore = create<TournamentState>()(
       },
 
       getQualifiedPlayersByRegion: (regionId) => {
-        return get().qualifiedPlayers.filter(qp => qp.region_id === regionId);
+        return get().qualifiedPlayers.filter(qp => qp.region_id === regionId && qp.target_stage === 'regional');
+      },
+
+      getQualifiedPlayersState: () => {
+        return get().qualifiedPlayers.filter(qp => qp.target_stage === 'state');
       },
 
       getAllCompletedMunicipalResults: () => get().completedMunicipalResults,
+      getAllCompletedRegionalResults: () => get().completedRegionalResults,
       
       getCompletedMunicipalResultsByRegion: (regionId) => get().completedMunicipalResults.filter(r => r.region_id === regionId),
       
@@ -910,11 +1255,51 @@ export const useTournamentStore = create<TournamentState>()(
         });
         return duplicates;
       },
+
+      getDuplicateTeamsState: () => {
+        const activeQualified = get().getQualifiedPlayersState().filter(qp => qp.is_active);
+        
+        const grouped = new Map<string, ReturnType<TournamentState['getDuplicateTeamsState']>[0]>();
+
+        activeQualified.forEach(qp => {
+          const team = get().getTeamById(qp.team_id);
+          const participant = get().participants.find(p => p.id === qp.participant_id);
+          const region = get().getRegionById(qp.region_id || '');
+          
+          if (!team || !region) return;
+
+          if (!grouped.has(team.id)) {
+            grouped.set(team.id, {
+              team_id: team.id,
+              team_name: team.name,
+              occurrences: []
+            });
+          }
+
+          grouped.get(team.id)!.occurrences.push({
+            qualified_player_id: qp.id,
+            region_id: region.id,
+            region_name: region.name,
+            participant_name: participant ? participant.display_name : 'Desconocido',
+            rank: qp.rank as 'champion' | 'runner_up',
+            team_id: team.id,
+            team_name: team.name
+          });
+        });
+
+        return Array.from(grouped.values()).filter(g => g.occurrences.length > 1);
+      },
       
       getAvailableTeamsForRegion: (regionId) => {
-        const activeQps = get().qualifiedPlayers.filter(qp => qp.region_id === regionId && qp.is_active);
-        const usedTeamIds = activeQps.map(qp => qp.team_id);
-        return get().teams.filter(t => t.is_active !== false && !usedTeamIds.includes(t.id));
+        const activeQualified = get().getQualifiedPlayersByRegion(regionId).filter(qp => qp.is_active);
+        const usedTeamIds = new Set(activeQualified.map(qp => qp.team_id));
+        return get().teams.filter(t => !usedTeamIds.has(t.id));
+      },
+
+      getAvailableTeamsForState: () => {
+        const activeQualified = get().getQualifiedPlayersState().filter(qp => qp.is_active);
+        const usedTeamIds = new Set(activeQualified.map(qp => qp.team_id));
+        return get().teams.filter(t => !usedTeamIds.has(t.id));
       },
 
       getRegionReadiness: (regionId) => {
@@ -922,19 +1307,41 @@ export const useTournamentStore = create<TournamentState>()(
         const completedMunicipalities = get().completedMunicipalResults.filter(r => r.region_id === regionId).length;
         const expectedQualifiedPlayers = completedMunicipalities * 2;
         const actualQualifiedPlayers = get().qualifiedPlayers.filter(qp => qp.region_id === regionId && qp.is_active).length;
-        const duplicateGroups = get().getDuplicateTeamsByRegion(regionId).length;
+        const duplicateGroups = get().getDuplicateTeamsByRegion(regionId);
         const pendingMunicipalities = totalMunicipalities - completedMunicipalities;
 
         return {
-          isReady: completedMunicipalities > 0 && completedMunicipalities === totalMunicipalities && duplicateGroups === 0,
+          isReady: completedMunicipalities > 0 && completedMunicipalities === totalMunicipalities && duplicateGroups.length === 0,
           totalMunicipalities,
           completedMunicipalities,
           expectedQualifiedPlayers,
           actualQualifiedPlayers,
-          duplicateGroups,
+          duplicateGroups: duplicateGroups.length,
           pendingMunicipalities
         };
       },
+
+      getStateReadiness: () => {
+        const totalRegions = get().regions.length;
+        const completedRegions = get().completedRegionalResults.length;
+        const expectedQualifiedPlayers = totalRegions * 2;
+        
+        const activeQualified = get().getQualifiedPlayersState().filter(qp => qp.is_active);
+        const actualQualifiedPlayers = activeQualified.length;
+        
+        const duplicateGroups = get().getDuplicateTeamsState();
+
+        return {
+          isReady: completedRegions === totalRegions && expectedQualifiedPlayers > 0 && actualQualifiedPlayers === expectedQualifiedPlayers && duplicateGroups.length === 0,
+          totalRegions,
+          completedRegions,
+          expectedQualifiedPlayers,
+          actualQualifiedPlayers,
+          duplicateGroups: duplicateGroups.length,
+          pendingRegions: totalRegions - completedRegions
+        };
+      },
+      
       
       getAvailableTeams: () => {
         const session = get().currentSession;
