@@ -4,9 +4,21 @@ import { useTournamentStore } from '../../store';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Team } from '../../types';
 
+type WindowWithWebkitAudio = Window & typeof globalThis & {
+  webkitAudioContext?: typeof AudioContext;
+};
+
+const getAudioContext = () => {
+  const AudioContextConstructor = window.AudioContext || (window as WindowWithWebkitAudio).webkitAudioContext;
+  return AudioContextConstructor ? new AudioContextConstructor() : null;
+};
+
+const getErrorMessage = (err: unknown, fallback: string) => err instanceof Error ? err.message : fallback;
+
 const playTickSound = () => {
   try {
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audioCtx = getAudioContext();
+    if (!audioCtx) return;
     const oscillator = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
     oscillator.type = 'triangle';
@@ -18,12 +30,15 @@ const playTickSound = () => {
     gainNode.connect(audioCtx.destination);
     oscillator.start();
     oscillator.stop(audioCtx.currentTime + 0.05);
-  } catch (e) {}
+  } catch {
+    /* ignore audio errors */
+  }
 };
 
 const playSuccessSound = () => {
   try {
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audioCtx = getAudioContext();
+    if (!audioCtx) return;
     [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => { 
       const oscillator = audioCtx.createOscillator();
       const gainNode = audioCtx.createGain();
@@ -37,7 +52,7 @@ const playSuccessSound = () => {
       oscillator.start(audioCtx.currentTime + i * 0.05);
       oscillator.stop(audioCtx.currentTime + 1.5);
     });
-  } catch (e) {
+  } catch {
     /* ignore audio errors */
   }
 };
@@ -91,7 +106,7 @@ export default function RouletteScreen() {
       for (let i = 0; i < 8; i++) {
         display.push(shuffled[i % shuffled.length]);
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setWheelTeams(display);
     }
   }, [availableTeams, isSpinning]);
@@ -128,8 +143,8 @@ export default function RouletteScreen() {
             onClick={() => {
               try {
                 prepareDraftSessionForDraw();
-              } catch (err: any) {
-                setErrorMsg(err.message || 'Error al preparar sesión.');
+              } catch (err: unknown) {
+                setErrorMsg(getErrorMessage(err, 'Error al preparar sesión.'));
               }
             }}
             className="bg-transparent border border-[var(--color-primary)] text-[var(--color-primary)] px-8 py-3 rounded-[2px] font-bold text-lg hover:bg-[rgba(139,197,63,0.1)] transition-colors"
@@ -158,8 +173,8 @@ export default function RouletteScreen() {
             onClick={() => {
               try {
                 startDraw();
-              } catch (err: any) {
-                setErrorMsg(err.message || 'Error al iniciar sorteo.');
+              } catch (err: unknown) {
+                setErrorMsg(getErrorMessage(err, 'Error al iniciar sorteo.'));
               }
             }}
             className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-8 py-3 rounded-[2px] font-bold text-lg hover:bg-opacity-90 transition-opacity"
@@ -249,8 +264,8 @@ export default function RouletteScreen() {
     try {
       const assignment = assignRandomTeamToParticipant(currentParticipant.id);
       teamAssigned = getTeamById(assignment.team_id);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al asignar selección.');
+    } catch (err: unknown) {
+      setErrorMsg(getErrorMessage(err, 'Error al asignar selección.'));
       return; // Detener animación si falla la lógica
     }
 

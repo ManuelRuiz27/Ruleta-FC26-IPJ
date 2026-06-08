@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useTournamentStore } from '../../store';
 
+const getErrorMessage = (err: unknown) => err instanceof Error ? err.message : 'Ocurrió un error inesperado.';
+
 export default function StateBracket() {
   const navigate = useNavigate();
 
@@ -36,16 +38,16 @@ export default function StateBracket() {
   const handleCreateSession = () => {
     try {
       createStateSession();
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e: unknown) {
+      alert(getErrorMessage(e));
     }
   };
 
   const handleGenerateBracket = () => {
     try {
       generateStateBracket();
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e: unknown) {
+      alert(getErrorMessage(e));
     }
   };
 
@@ -54,8 +56,8 @@ export default function StateBracket() {
       createCompletedStateResult();
       clearLocalTournamentState();
       navigate(`/estatal/dashboard`);
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e: unknown) {
+      alert(getErrorMessage(e));
     }
   };
 

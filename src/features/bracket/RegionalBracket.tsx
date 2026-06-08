@@ -2,6 +2,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTournamentStore } from '../../store';
 import { initialRegions } from '../../data/regions';
 
+const getErrorMessage = (err: unknown) => err instanceof Error ? err.message : 'Ocurrió un error inesperado.';
+
 export default function RegionalBracket() {
   const { regionId } = useParams();
   const navigate = useNavigate();
@@ -43,16 +45,16 @@ export default function RegionalBracket() {
   const handleCreateSession = () => {
     try {
       createRegionalSession(regionId);
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e: unknown) {
+      alert(getErrorMessage(e));
     }
   };
 
   const handleGenerateBracket = () => {
     try {
       generateRegionalBracket();
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e: unknown) {
+      alert(getErrorMessage(e));
     }
   };
 
@@ -61,8 +63,8 @@ export default function RegionalBracket() {
       createCompletedRegionalResult();
       clearLocalTournamentState();
       navigate(`/regional/${regionId}`);
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e: unknown) {
+      alert(getErrorMessage(e));
     }
   };
 

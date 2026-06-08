@@ -2,11 +2,14 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { 
   Region, Municipality, Team, DrawSession, Participant, Assignment,
-  Bracket, Match, RoundType, QualifiedPlayer, CompletedMunicipalResult, CompletedRegionalResult, CompletedStateResult, TeamReassignment 
+  Bracket, Match, RoundType, QualifiedPlayer, CompletedMunicipalResult, CompletedRegionalResult, CompletedStateResult, TeamReassignment, SessionStatus
 } from '../types';
 import { initialRegions } from '../data/regions';
 import { initialMunicipalities } from '../data/municipalities';
 import { initialTeams } from '../data/teams';
+
+const isSessionStatus = (status: unknown): status is SessionStatus =>
+  typeof status === 'string' && ['draft', 'ready_for_draw', 'drawing', 'draw_completed', 'bracket_ready', 'bracket_active', 'completed', 'locked'].includes(status);
 
 interface TournamentState {
   regions: Region[];
@@ -597,7 +600,7 @@ export const useTournamentStore = create<TournamentState>()(
         } else { sessionCompleted = true; }
 
         const currentSession = get().currentSession;
-        let nextStatus = currentSession?.status;
+        let nextStatus: SessionStatus | undefined = currentSession?.status;
         if (!isBye && currentSession?.status === 'bracket_ready') nextStatus = 'bracket_active';
         if (sessionCompleted) nextStatus = 'completed';
 
@@ -610,7 +613,9 @@ export const useTournamentStore = create<TournamentState>()(
             } else if (p.id === loserId) return { ...p, status: 'eliminated' };
             return p;
           }),
-          currentSession: currentSession ? { ...currentSession, status: nextStatus as any, completed_at: sessionCompleted ? new Date().toISOString() : currentSession.completed_at } : null
+          currentSession: currentSession && isSessionStatus(nextStatus)
+            ? { ...currentSession, status: nextStatus, completed_at: sessionCompleted ? new Date().toISOString() : currentSession.completed_at }
+            : null
         }));
 
         if (sessionCompleted) {

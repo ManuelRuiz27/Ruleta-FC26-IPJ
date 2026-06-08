@@ -1,21 +1,20 @@
-export function exportToJSON(filename: string, data: any) {
+export function exportToJSON(filename: string, data: unknown) {
   const jsonStr = JSON.stringify(data, null, 2);
   const blob = new Blob([jsonStr], { type: 'application/json' });
   downloadBlob(blob, `${filename}.json`);
 }
 
-export function exportToCSV(filename: string, data: any[], headers?: { key: string; label: string }[]) {
+export function exportToCSV(filename: string, data: object[], headers?: { key: string; label: string }[]) {
   if (!data || data.length === 0) {
     alert("No hay datos para exportar.");
     return;
   }
 
   // If no headers provided, extract them from the first object
-  let csvHeaders = headers;
-  if (!csvHeaders) {
+  const csvHeaders = headers ?? (() => {
     const keys = Object.keys(data[0]);
-    csvHeaders = keys.map(k => ({ key: k, label: k }));
-  }
+    return keys.map(k => ({ key: k, label: k }));
+  })();
 
   const csvRows = [];
   
@@ -25,8 +24,9 @@ export function exportToCSV(filename: string, data: any[], headers?: { key: stri
 
   // Create Data Rows
   for (const row of data) {
+    const rowRecord = row as Record<string, unknown>;
     const values = csvHeaders.map(h => {
-      let val = row[h.key];
+      let val = rowRecord[h.key];
       if (val === null || val === undefined) {
         val = '';
       }

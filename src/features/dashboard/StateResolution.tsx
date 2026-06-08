@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTournamentStore } from '../../store';
 
+type StateDuplicateOccurrence = ReturnType<ReturnType<typeof useTournamentStore.getState>['getDuplicateTeamsState']>[number]['occurrences'][number];
+
+const getErrorMessage = (err: unknown) => err instanceof Error ? err.message : 'Error al reasignar selección';
+
 export default function StateResolution() {
   const navigate = useNavigate();
 
@@ -18,13 +22,14 @@ export default function StateResolution() {
   const duplicates = getDuplicateTeamsState();
   const availableTeams = getAvailableTeamsForState();
 
-  const handleDrawKeeper = (teamId: string, candidates: any[]) => {
+  const handleDrawKeeper = (teamId: string, candidates: StateDuplicateOccurrence[]) => {
+    // eslint-disable-next-line react-hooks/purity
     const randomIdx = Math.floor(Math.random() * candidates.length);
     const selectedKeeper = candidates[randomIdx].qualified_player_id;
     setKeepers(prev => ({ ...prev, [teamId]: selectedKeeper }));
   };
 
-  const getKeeperCandidates = (occurrences: any[]) => {
+  const getKeeperCandidates = (occurrences: StateDuplicateOccurrence[]) => {
     const champions = occurrences.filter(o => o.rank === 'champion');
     if (champions.length > 0) return champions;
     return occurrences;
@@ -35,6 +40,7 @@ export default function StateResolution() {
       alert("No hay equipos disponibles en el estado para reasignar.");
       return;
     }
+    // eslint-disable-next-line react-hooks/purity
     const randomTeamIdx = Math.floor(Math.random() * availableTeams.length);
     const newTeam = availableTeams[randomTeamIdx];
 
@@ -45,8 +51,8 @@ export default function StateResolution() {
         keptByQualifiedPlayerId: keptByPlayerId,
         reason: "Resolución de duplicados por sistema (Fase Estatal)"
       });
-    } catch (err: any) {
-      alert(err.message || "Error al reasignar selección");
+    } catch (err: unknown) {
+      alert(getErrorMessage(err));
     }
   };
 

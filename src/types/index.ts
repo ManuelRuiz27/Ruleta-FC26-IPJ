@@ -158,8 +158,8 @@ export interface AuditLog {
   action: string;
   entity_type: string;
   entity_id: string | null;
-  previous_value: Record<string, any> | null;
-  new_value: Record<string, any> | null;
+  previous_value: Record<string, unknown> | null;
+  new_value: Record<string, unknown> | null;
   reason: string | null;
   created_at: string;
 }

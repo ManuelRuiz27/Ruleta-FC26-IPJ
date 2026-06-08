@@ -3,6 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTournamentStore } from '../../store';
 import { initialRegions } from '../../data/regions';
 
+type RegionalDuplicateOccurrence = ReturnType<ReturnType<typeof useTournamentStore.getState>['getDuplicateTeamsByRegion']>[number]['occurrences'][number];
+
+const getErrorMessage = (err: unknown) => err instanceof Error ? err.message : 'Error al reasignar selección';
+
 export default function RegionalResolution() {
   const { regionId } = useParams();
   const navigate = useNavigate();
@@ -25,13 +29,14 @@ export default function RegionalResolution() {
   const duplicates = getDuplicateTeamsByRegion(region.id);
   const availableTeams = getAvailableTeamsForRegion(region.id);
 
-  const handleDrawKeeper = (teamId: string, candidates: any[]) => {
+  const handleDrawKeeper = (teamId: string, candidates: RegionalDuplicateOccurrence[]) => {
+    // eslint-disable-next-line react-hooks/purity
     const randomIdx = Math.floor(Math.random() * candidates.length);
     const selectedKeeper = candidates[randomIdx].qualified_player_id;
     setKeepers(prev => ({ ...prev, [teamId]: selectedKeeper }));
   };
 
-  const getKeeperCandidates = (occurrences: any[]) => {
+  const getKeeperCandidates = (occurrences: RegionalDuplicateOccurrence[]) => {
     const champions = occurrences.filter(o => o.rank === 'champion');
     if (champions.length > 0) return champions;
     return occurrences;
@@ -42,6 +47,7 @@ export default function RegionalResolution() {
       alert("No hay equipos disponibles en esta región para reasignar.");
       return;
     }
+    // eslint-disable-next-line react-hooks/purity
     const randomTeamIdx = Math.floor(Math.random() * availableTeams.length);
     const newTeam = availableTeams[randomTeamIdx];
 
@@ -52,8 +58,8 @@ export default function RegionalResolution() {
         keptByQualifiedPlayerId: keptByPlayerId,
         reason: "Resolución de duplicados por sistema"
       });
-    } catch (err: any) {
-      alert(err.message || "Error al reasignar selección");
+    } catch (err: unknown) {
+      alert(getErrorMessage(err));
     }
   };
 

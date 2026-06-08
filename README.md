@@ -1,5 +1,36 @@
 # Mundial FC 26 — Plataforma de Sorteo y Seguimiento
 
+Para Vercel, este repo incluye `vercel.json` con la reescritura SPA.
+
+## Variables para Vercel + Supabase
+
+Configura estas variables en Vercel, dentro de Project Settings -> Environment Variables, para Production y Preview segun aplique:
+
+```env
+VITE_SUPABASE_URL=https://zfgmahstwayjrcurmsef.supabase.co
+VITE_SUPABASE_ANON_KEY=
+VITE_APP_ENV=production
+VITE_APP_NAME="Mundial FC 26"
+VITE_ENABLE_REALTIME=true
+VITE_ENABLE_DEMO_MODE=false
+```
+
+En Supabase, `VITE_SUPABASE_URL` sale del Project URL del proyecto. La llave para `VITE_SUPABASE_ANON_KEY` debe ser una llave publica de cliente: preferentemente `sb_publishable_...`; en proyectos legacy tambien puede usarse la `anon public key`. Ambas se obtienen en Supabase Dashboard -> Project Settings -> API Keys o desde el dialogo Connect del proyecto.
+
+No configures `service_role`, `sb_secret_...`, password de base de datos ni JWT secret en Vercel para este frontend.
+
+## Estado actual de Supabase
+
+El proyecto Supabase activo detectado es:
+
+```txt
+name: mundial-fc26
+project ref: zfgmahstwayjrcurmsef
+url: https://zfgmahstwayjrcurmsef.supabase.co
+region: us-east-2
+```
+
+Actualmente la app inicializa el cliente Supabase si existen variables, pero la persistencia operativa sigue en Zustand + `localStorage`. Para operacion multi-dispositivo o realtime falta implementar la capa de lectura/escritura contra Supabase y aplicar migraciones SQL con RLS.
 Plataforma oficial para la gestión operativa del sorteo y seguimiento del torneo "Mundial FC 26".
 
 ## Alcance MVP

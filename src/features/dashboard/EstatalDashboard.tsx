@@ -6,6 +6,8 @@ import ExportPanel from '../exports/ExportPanel';
 import { exportToCSV, exportToJSON } from '../../lib/utils/exportUtils';
 import { seedAllMunicipalities } from '../../lib/utils/seed';
 
+const getErrorMessage = (err: unknown) => err instanceof Error ? err.message : 'Ocurrió un error inesperado.';
+
 export default function EstatalDashboard() {
   const navigate = useNavigate();
   const allCompleted = useTournamentStore(state => state.getAllCompletedMunicipalResults());
@@ -113,8 +115,8 @@ export default function EstatalDashboard() {
                 onClick={() => {
                   try {
                     createStateQualifiedPlayers();
-                  } catch (e: any) {
-                    alert(e.message);
+                  } catch (e: unknown) {
+                    alert(getErrorMessage(e));
                   }
                 }}
                 className="px-6 py-3 bg-[var(--color-primary)] hover:bg-opacity-80 text-white rounded-lg font-bold shadow-lg transition-all"

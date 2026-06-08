@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTournamentStore } from '../../store';
 
+const getErrorMessage = (err: unknown, fallback: string) => err instanceof Error ? err.message : fallback;
+
 export default function MatchScoreCapture() {
   const { id, regionId, matchId } = useParams<{ id?: string, regionId?: string, matchId: string }>();
   const navigate = useNavigate();
@@ -156,7 +158,7 @@ export default function MatchScoreCapture() {
       return;
     }
 
-    let winnerId = '';
+    let winnerId: string;
     
     if (scoreA !== scoreB) {
       winnerId = scoreA > scoreB ? pA.id : pB.id;
@@ -196,8 +198,8 @@ export default function MatchScoreCapture() {
         winnerId
       });
       navigate(backUrl);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al guardar el marcador');
+    } catch (err: unknown) {
+      setErrorMsg(getErrorMessage(err, 'Error al guardar el marcador'));
     }
   };
 
