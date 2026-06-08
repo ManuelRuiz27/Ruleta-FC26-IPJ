@@ -8,6 +8,7 @@ import RouletteScreen from './features/draw/RouletteScreen';
 import AssignmentsBoard from './features/draw/AssignmentsBoard';
 import MunicipalBracket from './features/bracket/MunicipalBracket';
 import MatchScoreCapture from './features/bracket/MatchScoreCapture';
+import RegionalDashboard from './features/dashboard/RegionalDashboard';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         
         <Route element={<Layout />}>
           <Route path="/estatal/dashboard" element={<EstatalDashboard />} />
+          <Route path="/regional/:regionId" element={<RegionalDashboard />} />
           
           <Route path="/municipal/:id" element={<MunicipalSetup />} />
           <Route path="/municipal/:id/registro" element={<ParticipantsRegistry />} />

@@ -1,0 +1,166 @@
+import { useParams, useNavigate } from 'react-router-dom';
+import { useTournamentStore } from '../../store';
+import { initialRegions } from '../../data/regions';
+import { initialMunicipalities } from '../../data/municipalities';
+
+export default function RegionalDashboard() {
+  const { regionId } = useParams();
+  const navigate = useNavigate();
+
+  const getCompletedMunicipalResultsByRegion = useTournamentStore(state => state.getCompletedMunicipalResultsByRegion);
+  const getDuplicateTeamsByRegion = useTournamentStore(state => state.getDuplicateTeamsByRegion);
+
+  if (!regionId) return null;
+
+  const region = initialRegions.find(r => r.id === regionId);
+  if (!region) {
+    return (
+      <div className="max-w-6xl mx-auto p-6">
+        <h2 className="text-2xl font-bold text-red-500">Región no encontrada</h2>
+        <button onClick={() => navigate('/estatal/dashboard')} className="mt-4 text-blue-400 underline">Volver al Dashboard</button>
+      </div>
+    );
+  }
+
+  const regionMunicipalities = initialMunicipalities.filter(m => m.region_id === region.id);
+  const completedResults = getCompletedMunicipalResultsByRegion(region.id);
+  const duplicates = getDuplicateTeamsByRegion(region.id);
+
+  const totalMunicipalities = regionMunicipalities.length;
+  const completedCount = completedResults.length;
+  const qualifiedGenerated = completedCount * 2;
+  const pendingCount = totalMunicipalities - completedCount;
+
+  return (
+    <div className="max-w-6xl mx-auto p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-heading font-bold">Región: {region.name}</h2>
+        <button 
+          onClick={() => navigate('/estatal/dashboard')}
+          className="px-4 py-2 border border-[var(--color-border)] rounded text-sm hover:bg-[var(--color-surface)] transition-colors"
+        >
+          &larr; Volver a Estatal
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4">
+          <div className="text-sm text-[var(--color-muted)] font-mono mb-1">Avance Municipal</div>
+          <div className="text-3xl font-bold">{completedCount} / {totalMunicipalities}</div>
+        </div>
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4">
+          <div className="text-sm text-[var(--color-muted)] font-mono mb-1">Municipios Pendientes</div>
+          <div className="text-3xl font-bold text-orange-400">{pendingCount}</div>
+        </div>
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4">
+          <div className="text-sm text-[var(--color-muted)] font-mono mb-1">Clasificados Esperados</div>
+          <div className="text-3xl font-bold text-green-400">{qualifiedGenerated}</div>
+        </div>
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4">
+          <div className="text-sm text-[var(--color-muted)] font-mono mb-1">Duplicados Detectados</div>
+          <div className={`text-3xl font-bold ${duplicates.length > 0 ? 'text-red-400' : 'text-green-400'}`}>
+            {duplicates.length}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6 mb-8">
+        <h3 className="text-lg font-heading font-bold mb-4 text-red-400 flex items-center gap-2">
+          <span>⚠️ Alertas de Colisión de Selecciones</span>
+        </h3>
+        
+        {duplicates.length === 0 ? (
+          <p className="text-[var(--color-muted)]">Sin duplicados de selección en esta región.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {duplicates.map(dup => (
+              <div key={dup.team_id} className="border border-red-500/30 bg-red-500/10 rounded-lg p-4">
+                <div className="flex justify-between items-center mb-3">
+                  <div className="font-bold text-lg">{dup.team_name}</div>
+                  <div className="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-xs font-mono font-bold">
+                    {dup.occurrences.length} ocurrencias
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {dup.occurrences.map((occ, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-sm border-t border-red-500/20 pt-2">
+                      <div>
+                        <span className="font-medium">{occ.participant_name}</span>
+                        <span className="text-[var(--color-muted)] mx-2">en</span>
+                        <span className="italic">{occ.municipality_name}</span>
+                      </div>
+                      <span className={`text-xs px-2 py-0.5 rounded uppercase font-bold ${occ.rank === 'champion' ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-500/20 text-slate-300'}`}>
+                        {occ.rank === 'champion' ? 'Campeón' : 'Subcampeón'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
+        <div className="p-4 border-b border-[var(--color-border)] bg-black/20 flex justify-between items-center">
+          <h3 className="font-heading font-bold">Municipios de la Región</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-[var(--color-border)] bg-black/40 text-[var(--color-muted)] text-sm">
+                <th className="p-4 font-normal">Municipio</th>
+                <th className="p-4 font-normal">Estado</th>
+                <th className="p-4 font-normal">Campeón</th>
+                <th className="p-4 font-normal">Subcampeón</th>
+                <th className="p-4 font-normal">Fecha Cierre</th>
+              </tr>
+            </thead>
+            <tbody>
+              {regionMunicipalities.map(mun => {
+                const snapshot = completedResults.find(r => r.municipality_id === mun.id);
+                const isCompleted = !!snapshot;
+
+                return (
+                  <tr key={mun.id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-border)]/20 transition-colors">
+                    <td className="p-4 font-medium">{mun.name}</td>
+                    <td className="p-4">
+                      {isCompleted ? (
+                        <span className="bg-green-500/20 text-green-400 px-2 py-1 rounded text-xs uppercase font-bold tracking-wider">Completado</span>
+                      ) : (
+                        <span className="bg-orange-500/20 text-orange-400 px-2 py-1 rounded text-xs uppercase font-bold tracking-wider">Pendiente</span>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      {isCompleted ? (
+                        <div>
+                          <div className="font-medium">{snapshot.champion_name}</div>
+                          <div className="text-[var(--color-muted)] text-xs">{snapshot.champion_team_name}</div>
+                        </div>
+                      ) : (
+                        <span className="text-[var(--color-muted)]">-</span>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      {isCompleted ? (
+                        <div>
+                          <div className="font-medium">{snapshot.runner_up_name}</div>
+                          <div className="text-[var(--color-muted)] text-xs">{snapshot.runner_up_team_name}</div>
+                        </div>
+                      ) : (
+                        <span className="text-[var(--color-muted)]">-</span>
+                      )}
+                    </td>
+                    <td className="p-4 text-sm text-[var(--color-muted)] font-mono">
+                      {isCompleted ? new Date(snapshot.completed_at).toLocaleDateString() : '-'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}

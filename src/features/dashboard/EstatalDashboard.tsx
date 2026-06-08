@@ -1,18 +1,108 @@
+import { useNavigate } from 'react-router-dom';
+import { useTournamentStore } from '../../store';
+import { initialRegions } from '../../data/regions';
+import { initialMunicipalities } from '../../data/municipalities';
+
 export default function EstatalDashboard() {
+  const navigate = useNavigate();
+  const allCompleted = useTournamentStore(state => state.getAllCompletedMunicipalResults());
+  const getDuplicateTeamsByRegion = useTournamentStore(state => state.getDuplicateTeamsByRegion);
+
+  const totalMunicipalities = initialMunicipalities.length;
+  const completedCount = allCompleted.length;
+  const regionsWithActivity = new Set(allCompleted.map(r => r.region_id)).size;
+  const qualifiedGenerated = completedCount * 2; // champion and runner up
+
+  let regionsWithDuplicates = 0;
+  
+  const regionsData = initialRegions.map(region => {
+    const regionMunicipalities = initialMunicipalities.filter(m => m.region_id === region.id);
+    const completedInRegion = allCompleted.filter(r => r.region_id === region.id);
+    const duplicates = getDuplicateTeamsByRegion(region.id);
+    
+    if (duplicates.length > 0) regionsWithDuplicates++;
+
+    return {
+      ...region,
+      totalCount: regionMunicipalities.length,
+      completedCount: completedInRegion.length,
+      qualifiedGenerated: completedInRegion.length * 2,
+      duplicatesCount: duplicates.length
+    };
+  });
+
   return (
-    <div>
+    <div className="max-w-6xl mx-auto p-6">
       <h2 className="text-2xl font-heading font-bold mb-6">Dashboard Estatal</h2>
+      
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        {[1, 2, 3, 4].map(i => (
-          <div key={i} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4">
-            <div className="text-sm text-[var(--color-muted)] font-mono mb-1">KPI {i}</div>
-            <div className="text-3xl font-bold">0</div>
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4">
+          <div className="text-sm text-[var(--color-muted)] font-mono mb-1">Municipios</div>
+          <div className="text-3xl font-bold">{completedCount} / {totalMunicipalities}</div>
+        </div>
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4">
+          <div className="text-sm text-[var(--color-muted)] font-mono mb-1">Regiones Activas</div>
+          <div className="text-3xl font-bold">{regionsWithActivity} / {initialRegions.length}</div>
+        </div>
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4">
+          <div className="text-sm text-[var(--color-muted)] font-mono mb-1">Clasificados</div>
+          <div className="text-3xl font-bold text-green-400">{qualifiedGenerated}</div>
+        </div>
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4">
+          <div className="text-sm text-[var(--color-muted)] font-mono mb-1">Regiones c/ Duplicados</div>
+          <div className={`text-3xl font-bold ${regionsWithDuplicates > 0 ? 'text-red-400' : 'text-green-400'}`}>
+            {regionsWithDuplicates}
           </div>
-        ))}
+        </div>
       </div>
-      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6">
-        <h3 className="text-lg font-heading mb-4">Estado de Municipios</h3>
-        <p className="text-[var(--color-muted)] text-sm">Contenido pendiente...</p>
+
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
+        <div className="p-4 border-b border-[var(--color-border)] bg-black/20">
+          <h3 className="font-heading font-bold">Avance por Región</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-[var(--color-border)] bg-black/40 text-[var(--color-muted)] text-sm">
+                <th className="p-4 font-normal">Región</th>
+                <th className="p-4 font-normal">Avance</th>
+                <th className="p-4 font-normal">Clasificados</th>
+                <th className="p-4 font-normal">Duplicados</th>
+                <th className="p-4 font-normal text-right">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {regionsData.map(region => (
+                <tr key={region.id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-border)]/20 transition-colors">
+                  <td className="p-4 font-medium">{region.name}</td>
+                  <td className="p-4">
+                    <span className="font-mono bg-black/30 px-2 py-1 rounded text-sm">
+                      {region.completedCount} / {region.totalCount}
+                    </span>
+                  </td>
+                  <td className="p-4">{region.qualifiedGenerated}</td>
+                  <td className="p-4">
+                    {region.duplicatesCount > 0 ? (
+                      <span className="bg-red-500/20 text-red-400 px-2 py-1 rounded text-sm">
+                        {region.duplicatesCount} alerta(s)
+                      </span>
+                    ) : (
+                      <span className="text-[var(--color-muted)]">-</span>
+                    )}
+                  </td>
+                  <td className="p-4 text-right">
+                    <button
+                      onClick={() => navigate(`/regional/${region.id}`)}
+                      className="px-4 py-1.5 bg-[var(--color-primary)] hover:bg-opacity-80 rounded text-sm transition-colors"
+                    >
+                      Ver región
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
