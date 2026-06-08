@@ -60,11 +60,17 @@ export default function RegionalDashboard() {
         </div>
       </div>
 
-      {readiness.isReady && (
+      {readiness.isReady && readiness.actualQualifiedPlayers === readiness.expectedQualifiedPlayers && (
         <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-6 mb-8 flex items-center justify-between">
           <div className="flex items-center gap-3 text-green-400 font-bold text-lg">
             <span>✅ Región lista para bracket</span>
           </div>
+          <button 
+            onClick={() => navigate(`/regional/${region.id}/bracket`)}
+            className="px-6 py-3 bg-[var(--color-primary)] hover:bg-opacity-80 rounded text-sm font-bold transition-colors"
+          >
+            Ir a Bracket Regional
+          </button>
         </div>
       )}
 

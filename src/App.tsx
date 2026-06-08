@@ -10,6 +10,7 @@ import MunicipalBracket from './features/bracket/MunicipalBracket';
 import MatchScoreCapture from './features/bracket/MatchScoreCapture';
 import RegionalDashboard from './features/dashboard/RegionalDashboard';
 import RegionalResolution from './features/dashboard/RegionalResolution';
+import RegionalBracket from './features/bracket/RegionalBracket';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route path="/estatal/dashboard" element={<EstatalDashboard />} />
           <Route path="/regional/:regionId" element={<RegionalDashboard />} />
           <Route path="/regional/:regionId/resolucion" element={<RegionalResolution />} />
+          <Route path="/regional/:regionId/bracket" element={<RegionalBracket />} />
           
           <Route path="/municipal/:id" element={<MunicipalSetup />} />
           <Route path="/municipal/:id/registro" element={<ParticipantsRegistry />} />
