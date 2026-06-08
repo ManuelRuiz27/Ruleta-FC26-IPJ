@@ -25,6 +25,24 @@ export interface Municipality {
   created_at: string;
 }
 
+export interface MunicipalEvent {
+  id: string;
+  municipality_id: string;
+  label: string;
+  event_date: string | null;
+  sort_order: number;
+  is_active: boolean;
+}
+
+export interface AccessProfile {
+  id: string;
+  role: UserRole;
+  display_name: string;
+  pin: string;
+  municipality_id: string | null;
+  region_id: string | null;
+}
+
 export interface Team {
   id: string;
   name: string;
@@ -50,6 +68,7 @@ export interface DrawSession {
   stage: StageType;
   status: SessionStatus;
   municipality_id: string | null;
+  municipal_event_id?: string | null;
   region_id: string | null;
   name: string;
   participant_min: number;
@@ -132,6 +151,7 @@ export interface QualifiedPlayer {
   target_stage: StageType;
   participant_id: string;
   municipality_id: string | null;
+  municipal_event_id?: string | null;
   region_id: string | null;
   team_id: string;
   rank: QualificationRank;
@@ -170,6 +190,8 @@ export interface CompletedMunicipalResult {
 
   municipality_id: string;
   municipality_name: string;
+  municipal_event_id?: string | null;
+  municipal_event_label?: string | null;
   region_id: string;
   region_name: string;
 

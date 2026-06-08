@@ -18,7 +18,7 @@ export default function RegionalBracket() {
   const createRegionalSession = useTournamentStore(state => state.createRegionalSession);
   const generateRegionalBracket = useTournamentStore(state => state.generateRegionalBracket);
   const createCompletedRegionalResult = useTournamentStore(state => state.createCompletedRegionalResult);
-  const clearLocalTournamentState = useTournamentStore(state => state.clearLocalTournamentState);
+  const resetActiveSession = useTournamentStore(state => state.resetActiveSession);
 
   if (!regionId) return null;
 
@@ -61,7 +61,7 @@ export default function RegionalBracket() {
   const handleCloseRegional = () => {
     try {
       createCompletedRegionalResult();
-      clearLocalTournamentState();
+      resetActiveSession();
       navigate(`/regional/${regionId}`);
     } catch (e: unknown) {
       alert(getErrorMessage(e));
@@ -115,7 +115,7 @@ export default function RegionalBracket() {
 
       {isCurrentSessionRegional && bracket && (
         <>
-          {isFinalCompleted && currentSession?.status === 'bracket_ready' && (
+          {isFinalCompleted && currentSession?.status === 'completed' && (
             <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-8 text-center mb-8">
               <h3 className="text-2xl font-bold text-green-400 mb-4">Torneo Regional Finalizado</h3>
               <p className="text-[var(--color-muted)] mb-6">El campeón y subcampeón han sido definidos. Puedes cerrar esta fase.</p>

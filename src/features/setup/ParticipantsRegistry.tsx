@@ -1,9 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTournamentStore } from '../../store';
+import { getMunicipalEventById } from '../../data/municipalEvents';
+import { municipalRoute, resolveMunicipalEventId } from '../../lib/municipalRoutes';
 
 export default function ParticipantsRegistry() {
-  const { id } = useParams<{ id: string }>();
+  const { id, eventId } = useParams<{ id: string; eventId?: string }>();
   const navigate = useNavigate();
   const [text, setText] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
@@ -14,6 +16,8 @@ export default function ParticipantsRegistry() {
   const getMunicipalityById = useTournamentStore(state => state.getMunicipalityById);
 
   const municipality = id ? getMunicipalityById(id) : undefined;
+  const activeEventId = resolveMunicipalEventId(id, eventId);
+  const municipalEvent = getMunicipalEventById(activeEventId);
 
   const names = useMemo(() => {
     return text.split('\n').map(n => n.trim()).filter(n => n !== '');
@@ -23,10 +27,10 @@ export default function ParticipantsRegistry() {
     const { valid, errors: validationErrors } = validateParticipantNames(names);
     setErrors(validationErrors);
     
-    if (valid && municipality && id) {
-      const session = createMunicipalSession(id, municipality.region_id);
+    if (valid && municipality && id && activeEventId) {
+      const session = createMunicipalSession(id, municipality.region_id, activeEventId);
       setParticipantsFromNames(names, session.id);
-      navigate(`/municipal/${id}/ruleta`);
+      navigate(municipalRoute(id, activeEventId, 'ruleta'));
     }
   };
 
@@ -42,7 +46,10 @@ export default function ParticipantsRegistry() {
   return (
     <div>
       <h2 className="text-2xl font-heading font-bold mb-4">Registro de Participantes</h2>
-      <p className="text-[var(--color-muted)] mb-6">Municipio: <span className="font-bold text-[var(--color-text)]">{municipality.name}</span></p>
+      <p className="text-[var(--color-muted)] mb-6">
+        Municipio: <span className="font-bold text-[var(--color-text)]">{municipality.name}</span>
+        {municipalEvent && <span className="ml-2 text-[var(--color-primary)] font-bold">({municipalEvent.label})</span>}
+      </p>
       
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6">
         <div className="flex justify-between items-end mb-4">

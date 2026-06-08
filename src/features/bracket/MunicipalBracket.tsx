@@ -4,10 +4,12 @@ import { useTournamentStore } from '../../store';
 import ExportPanel from '../exports/ExportPanel';
 import { exportToCSV, exportToJSON } from '../../lib/utils/exportUtils';
 import html2canvas from 'html2canvas';
+import { municipalRoute, resolveMunicipalEventId } from '../../lib/municipalRoutes';
 
 export default function MunicipalBracket() {
-  const { id } = useParams<{ id: string }>();
+  const { id, eventId } = useParams<{ id: string; eventId?: string }>();
   const navigate = useNavigate();
+  const activeEventId = resolveMunicipalEventId(id, eventId);
   const bracketRef = useRef<HTMLDivElement>(null);
   const [isExportingImage, setIsExportingImage] = useState(false);
 
@@ -51,7 +53,7 @@ export default function MunicipalBracket() {
         <h2 className="text-xl font-heading font-bold text-[var(--color-danger)] mb-2">No hay sesión</h2>
         <p className="text-[var(--color-muted)] mb-4">Debes iniciar y completar el sorteo primero.</p>
         <button 
-          onClick={() => navigate(`/municipal/${id}/registro`)}
+          onClick={() => navigate(municipalRoute(id!, activeEventId, 'registro'))}
           className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-4 py-2 rounded-[2px] font-medium"
         >
           Ir a Registro
@@ -67,7 +69,7 @@ export default function MunicipalBracket() {
         <h2 className="text-xl font-heading font-bold mb-2">Sorteo Incompleto</h2>
         <p className="text-[var(--color-muted)] mb-4">Primero debe completarse el sorteo de selecciones.</p>
         <button 
-          onClick={() => navigate(`/municipal/${id}/ruleta`)}
+          onClick={() => navigate(municipalRoute(id!, activeEventId, 'ruleta'))}
           className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-4 py-2 rounded-[2px] font-medium"
         >
           Ir a Ruleta
@@ -282,7 +284,7 @@ export default function MunicipalBracket() {
                         </button>
                       ) : (
                         <button 
-                          onClick={() => navigate(`/municipal/${id}/partido/${match.id}`)}
+                          onClick={() => navigate(municipalRoute(id!, activeEventId, `partido/${match.id}`))}
                           className="w-full bg-transparent border border-[var(--color-border)] text-[var(--color-text)] py-2 rounded-[2px] font-medium text-sm hover:bg-[#1b4028] transition-colors"
                         >
                           Ver resultado
@@ -290,7 +292,7 @@ export default function MunicipalBracket() {
                       )
                     ) : match.status === 'ready' ? (
                       <button 
-                        onClick={() => navigate(`/municipal/${id}/partido/${match.id}`)}
+                        onClick={() => navigate(municipalRoute(id!, activeEventId, `partido/${match.id}`))}
                         className="w-full bg-transparent border border-[var(--color-primary)] text-[var(--color-primary)] py-2 rounded-[2px] font-medium text-sm hover:bg-[rgba(139,197,63,0.1)] transition-colors"
                       >
                         Capturar marcador
@@ -318,14 +320,14 @@ export default function MunicipalBracket() {
             title="Exportar Resultado Municipal" 
             description="Descarga el resultado oficial y detalles de los clasificados de este municipio."
             onExportCSV={() => {
-              const res = completedMunicipalResults.find(r => r.municipality_id === id);
+              const res = completedMunicipalResults.find(r => r.municipal_event_id === activeEventId || (!r.municipal_event_id && r.municipality_id === id));
               if (res) exportToCSV(`resultado_municipal_${id}`, [res]);
             }}
             onExportJSON={() => {
-              const res = completedMunicipalResults.find(r => r.municipality_id === id);
+              const res = completedMunicipalResults.find(r => r.municipal_event_id === activeEventId || (!r.municipal_event_id && r.municipality_id === id));
               if (res) exportToJSON(`resultado_municipal_${id}`, [res]);
             }}
-            disabled={!completedMunicipalResults.some(r => r.municipality_id === id)}
+            disabled={!completedMunicipalResults.some(r => r.municipal_event_id === activeEventId || (!r.municipal_event_id && r.municipality_id === id))}
           />
         </div>
       )}

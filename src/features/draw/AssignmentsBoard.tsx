@@ -1,9 +1,11 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTournamentStore } from '../../store';
+import { municipalRoute, resolveMunicipalEventId } from '../../lib/municipalRoutes';
 
 export default function AssignmentsBoard() {
-  const { id } = useParams<{ id: string }>();
+  const { id, eventId } = useParams<{ id: string; eventId?: string }>();
   const navigate = useNavigate();
+  const activeEventId = resolveMunicipalEventId(id, eventId);
   
   const currentSession = useTournamentStore(state => state.currentSession);
   const allParticipants = useTournamentStore(state => state.participants);
@@ -43,7 +45,7 @@ export default function AssignmentsBoard() {
               </span>
               {id && (
                 <button 
-                  onClick={() => navigate(`/municipal/${id}/bracket`)}
+                  onClick={() => navigate(municipalRoute(id, activeEventId, 'bracket'))}
                   className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-4 py-1.5 rounded-[2px] text-sm font-medium hover:bg-opacity-90 transition-opacity"
                 >
                   Ir a Bracket Municipal
@@ -53,7 +55,7 @@ export default function AssignmentsBoard() {
           )}
           {currentSession && currentSession.status !== 'draw_completed' && id && (
             <button 
-              onClick={() => navigate(`/municipal/${id}/ruleta`)}
+              onClick={() => navigate(municipalRoute(id, activeEventId, 'ruleta'))}
               className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-4 py-1.5 rounded-[2px] text-sm font-medium hover:bg-opacity-90 transition-opacity"
             >
               Volver a Ruleta

@@ -7,6 +7,7 @@ import type {
 import { initialRegions } from '../data/regions';
 import { initialMunicipalities } from '../data/municipalities';
 import { initialTeams } from '../data/teams';
+import { getMunicipalEventById, initialMunicipalEvents } from '../data/municipalEvents';
 
 const isSessionStatus = (status: unknown): status is SessionStatus =>
   typeof status === 'string' && ['draft', 'ready_for_draw', 'drawing', 'draw_completed', 'bracket_ready', 'bracket_active', 'completed', 'locked'].includes(status);
@@ -25,9 +26,10 @@ interface TournamentState {
 
   // Actions
   setCurrentSession: (session: DrawSession | null) => void;
-  createMunicipalSession: (municipalityId: string, regionId: string) => DrawSession;
+  createMunicipalSession: (municipalityId: string, regionId: string, municipalEventId?: string | null) => DrawSession;
   createRegionalSession: (regionId: string) => DrawSession;
   resetMunicipalSession: () => void;
+  resetActiveSession: () => void;
   clearLocalTournamentState: () => void;
   qualifiedPlayers: QualifiedPlayer[];
   completedMunicipalResults: CompletedMunicipalResult[];
@@ -160,15 +162,17 @@ export const useTournamentStore = create<TournamentState>()(
       teamReassignments: [],
 
       setCurrentSession: (session) => set({ currentSession: session }),
-      createMunicipalSession: (municipalityId, regionId) => {
+      createMunicipalSession: (municipalityId, regionId, municipalEventId = null) => {
+        const event = municipalEventId ? getMunicipalEventById(municipalEventId) : undefined;
         const id = crypto.randomUUID();
         const session: DrawSession = {
           id,
           stage: 'municipal',
           status: 'ready_for_draw',
           municipality_id: municipalityId,
+          municipal_event_id: municipalEventId ?? null,
           region_id: regionId,
-          name: `Sorteo Municipal`,
+          name: event ? `Sorteo Municipal - ${event.label}` : `Sorteo Municipal`,
           participant_min: 8,
           participant_max: 32,
           allow_duplicate_teams: false,
@@ -255,7 +259,19 @@ export const useTournamentStore = create<TournamentState>()(
         return session;
       },
       resetMunicipalSession: () => set({ currentSession: null, participants: [], assignments: [], bracket: null, matches: [] }),
-      clearLocalTournamentState: () => set({ currentSession: null, participants: [], assignments: [], bracket: null, matches: [], qualifiedPlayers: [], completedMunicipalResults: [], completedRegionalResults: [], teamReassignments: [] }),
+      resetActiveSession: () => set({ currentSession: null, participants: [], assignments: [], bracket: null, matches: [] }),
+      clearLocalTournamentState: () => set({
+        currentSession: null,
+        participants: [],
+        assignments: [],
+        bracket: null,
+        matches: [],
+        qualifiedPlayers: [],
+        completedMunicipalResults: [],
+        completedRegionalResults: [],
+        completedStateResults: [],
+        teamReassignments: []
+      }),
       
       prepareDraftSessionForDraw: () => {
         const session = get().currentSession;
@@ -666,8 +682,8 @@ export const useTournamentStore = create<TournamentState>()(
         const runnerUpAssignment = get().getParticipantAssignment(runnerUp.id);
         if (!championAssignment || !runnerUpAssignment) return;
         const newQPs: QualifiedPlayer[] = [
-          { id: crypto.randomUUID(), source_session_id: session.id, target_stage: 'regional', participant_id: champion.id, municipality_id: session.municipality_id, region_id: session.region_id, team_id: championAssignment.team_id, rank: 'champion', is_active: true, created_at: new Date().toISOString() },
-          { id: crypto.randomUUID(), source_session_id: session.id, target_stage: 'regional', participant_id: runnerUp.id, municipality_id: session.municipality_id, region_id: session.region_id, team_id: runnerUpAssignment.team_id, rank: 'runner_up', is_active: true, created_at: new Date().toISOString() }
+          { id: crypto.randomUUID(), source_session_id: session.id, target_stage: 'regional', participant_id: champion.id, municipality_id: session.municipality_id, municipal_event_id: session.municipal_event_id, region_id: session.region_id, team_id: championAssignment.team_id, rank: 'champion', is_active: true, created_at: new Date().toISOString() },
+          { id: crypto.randomUUID(), source_session_id: session.id, target_stage: 'regional', participant_id: runnerUp.id, municipality_id: session.municipality_id, municipal_event_id: session.municipal_event_id, region_id: session.region_id, team_id: runnerUpAssignment.team_id, rank: 'runner_up', is_active: true, created_at: new Date().toISOString() }
         ];
         set(state => ({ qualifiedPlayers: [...state.qualifiedPlayers, ...newQPs] }));
       },
@@ -690,6 +706,7 @@ export const useTournamentStore = create<TournamentState>()(
         if (!championTeam || !runnerUpTeam) return;
 
         const municipality = get().getMunicipalityById(session.municipality_id!);
+        const municipalEvent = getMunicipalEventById(session.municipal_event_id);
         const region = get().getRegionById(session.region_id!);
         if (!municipality || !region) return;
 
@@ -710,6 +727,8 @@ export const useTournamentStore = create<TournamentState>()(
           source_session_id: session.id,
           municipality_id: municipality.id,
           municipality_name: municipality.name,
+          municipal_event_id: municipalEvent?.id ?? session.municipal_event_id ?? null,
+          municipal_event_label: municipalEvent?.label ?? null,
           region_id: region.id,
           region_name: region.name,
           completed_at: session.completed_at || new Date().toISOString(),
@@ -739,7 +758,9 @@ export const useTournamentStore = create<TournamentState>()(
 
       createCompletedRegionalResult: () => {
         const session = get().currentSession;
-        if (!session || session.stage !== 'regional') return;
+        if (!session || session.stage !== 'regional' || session.status !== 'completed') return;
+
+        if (get().completedRegionalResults.some(r => r.source_session_id === session.id)) return;
 
         const { champion, runnerUp } = get().getChampionAndRunnerUp();
         if (!champion || !runnerUp) return;
@@ -866,7 +887,12 @@ export const useTournamentStore = create<TournamentState>()(
 
         activeQualified.forEach(qp => {
           const originalParticipant = get().participants.find(p => p.id === qp.participant_id);
-          const pName = originalParticipant ? originalParticipant.display_name : 'Desconocido';
+          const regionalSnapshot = get().completedRegionalResults.find(r => r.source_session_id === qp.source_session_id);
+          const pName = originalParticipant
+            ? originalParticipant.display_name
+            : regionalSnapshot
+              ? qp.rank === 'champion' ? regionalSnapshot.champion_name : regionalSnapshot.runner_up_name
+              : 'Desconocido';
           const pId = crypto.randomUUID();
           
           newParticipants.push({
@@ -947,7 +973,7 @@ export const useTournamentStore = create<TournamentState>()(
         
         let previousRoundMatches: Match[] = [];
 
-        for (const round of [...activeRounds].reverse()) {
+        for (const round of activeRounds) {
           const roundMatchesCount = round === 'final' ? 1 : 
                                    round === 'semifinal' ? 2 : 
                                    round === 'quarterfinal' ? 4 : 
@@ -1044,7 +1070,9 @@ export const useTournamentStore = create<TournamentState>()(
 
       createCompletedStateResult: () => {
         const session = get().currentSession;
-        if (!session || session.stage !== 'state') return;
+        if (!session || session.stage !== 'state' || session.status !== 'completed') return;
+
+        if (get().completedStateResults.some(r => r.source_session_id === session.id)) return;
 
         const { champion, runnerUp } = get().getChampionAndRunnerUp();
         if (!champion || !runnerUp) return;
@@ -1270,6 +1298,7 @@ export const useTournamentStore = create<TournamentState>()(
           const team = get().getTeamById(qp.team_id);
           const participant = get().participants.find(p => p.id === qp.participant_id);
           const region = get().getRegionById(qp.region_id || '');
+          const regionalSnapshot = get().completedRegionalResults.find(r => r.source_session_id === qp.source_session_id);
           
           if (!team || !region) return;
 
@@ -1285,7 +1314,11 @@ export const useTournamentStore = create<TournamentState>()(
             qualified_player_id: qp.id,
             region_id: region.id,
             region_name: region.name,
-            participant_name: participant ? participant.display_name : 'Desconocido',
+            participant_name: participant
+              ? participant.display_name
+              : regionalSnapshot
+                ? qp.rank === 'champion' ? regionalSnapshot.champion_name : regionalSnapshot.runner_up_name
+                : 'Desconocido',
             rank: qp.rank as 'champion' | 'runner_up',
             team_id: team.id,
             team_name: team.name
@@ -1308,7 +1341,8 @@ export const useTournamentStore = create<TournamentState>()(
       },
 
       getRegionReadiness: (regionId) => {
-        const totalMunicipalities = get().municipalities.filter(m => m.region_id === regionId).length;
+        const regionMunicipalityIds = get().municipalities.filter(m => m.region_id === regionId).map(m => m.id);
+        const totalMunicipalities = initialMunicipalEvents.filter(event => regionMunicipalityIds.includes(event.municipality_id)).length;
         const completedMunicipalities = get().completedMunicipalResults.filter(r => r.region_id === regionId).length;
         const expectedQualifiedPlayers = completedMunicipalities * 2;
         const actualQualifiedPlayers = get().qualifiedPlayers.filter(qp => qp.region_id === regionId && qp.is_active).length;
@@ -1384,6 +1418,8 @@ export const useTournamentStore = create<TournamentState>()(
         matches: state.matches,
         qualifiedPlayers: state.qualifiedPlayers,
         completedMunicipalResults: state.completedMunicipalResults,
+        completedRegionalResults: state.completedRegionalResults,
+        completedStateResults: state.completedStateResults,
         teamReassignments: state.teamReassignments
       }),
     }

@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "smoke:tournament": "npm exec --yes tsx -- scripts/smoke-tournament.ts",
     "preview": "vite preview"
   },
   "dependencies": {

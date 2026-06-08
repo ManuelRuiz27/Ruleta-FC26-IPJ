@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTournamentStore } from '../../store';
+import { municipalRoute, resolveMunicipalEventId } from '../../lib/municipalRoutes';
 
 const getErrorMessage = (err: unknown, fallback: string) => err instanceof Error ? err.message : fallback;
 
 export default function MatchScoreCapture() {
-  const { id, regionId, matchId } = useParams<{ id?: string, regionId?: string, matchId: string }>();
+  const { id, regionId, eventId, matchId } = useParams<{ id?: string, regionId?: string, eventId?: string, matchId: string }>();
   const navigate = useNavigate();
+  const activeEventId = resolveMunicipalEventId(id, eventId);
   
   const isState = window.location.pathname.includes('/estatal');
-  const backUrl = isState ? '/estatal/bracket' : regionId ? `/regional/${regionId}/bracket` : `/municipal/${id}/bracket`;
+  const backUrl = isState ? '/estatal/bracket' : regionId ? `/regional/${regionId}/bracket` : municipalRoute(id!, activeEventId, 'bracket');
   
   const getMatchById = useTournamentStore(state => state.getMatchById);
   const participants = useTournamentStore(state => state.participants);

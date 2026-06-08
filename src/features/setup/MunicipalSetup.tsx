@@ -1,5 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTournamentStore } from '../../store';
+import { getMunicipalEventsByMunicipality } from '../../data/municipalEvents';
+import { municipalRoute } from '../../lib/municipalRoutes';
 
 export default function MunicipalSetup() {
   const { id } = useParams<{ id: string }>();
@@ -13,6 +15,7 @@ export default function MunicipalSetup() {
   
   const municipality = id ? getMunicipalityById(id) : undefined;
   const region = municipality ? getRegionById(municipality.region_id) : undefined;
+  const municipalEvents = municipality ? getMunicipalEventsByMunicipality(municipality.id) : [];
 
   const sessionExists = currentSession && currentSession.municipality_id === municipality?.id;
   const sessionStatus = sessionExists ? currentSession.status : 'No iniciada';
@@ -74,22 +77,27 @@ export default function MunicipalSetup() {
         )}
 
         <div className="border-t border-[var(--color-border)] pt-6">
-          <p className="text-[var(--color-muted)] text-sm mb-4">Acciones disponibles para este municipio:</p>
-          {isCompleted ? (
-            <button 
-              onClick={() => navigate(`/municipal/${municipality.id}/bracket`)}
-              className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-6 py-2 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity"
-            >
-              Ver bracket
-            </button>
-          ) : (
-            <button 
-              onClick={() => navigate(`/municipal/${municipality.id}/registro`)}
-              className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-6 py-2 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity"
-            >
-              Registrar participantes
-            </button>
-          )}
+          <p className="text-[var(--color-muted)] text-sm mb-4">Jornadas disponibles para este municipio:</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {municipalEvents.map(event => {
+              const eventSessionActive = currentSession?.municipality_id === municipality.id && currentSession.municipal_event_id === event.id;
+              const eventResult = useTournamentStore.getState().completedMunicipalResults.find(result => result.municipal_event_id === event.id);
+              return (
+                <div key={event.id} className="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-bg)]">
+                  <div className="text-xs text-[var(--color-muted)] font-mono uppercase mb-1">{event.label}</div>
+                  <div className="font-bold mb-3">
+                    {eventResult ? 'Eliminatoria cerrada' : eventSessionActive ? currentSession.status : 'No iniciada'}
+                  </div>
+                  <button
+                    onClick={() => navigate(municipalRoute(municipality.id, event.id, eventResult ? 'bracket' : 'registro'))}
+                    className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-4 py-2 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity"
+                  >
+                    {eventResult ? 'Ver bracket' : 'Operar jornada'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

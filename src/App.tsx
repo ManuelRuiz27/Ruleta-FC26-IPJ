@@ -13,6 +13,7 @@ import RegionalResolution from './features/dashboard/RegionalResolution';
 import RegionalBracket from './features/bracket/RegionalBracket';
 import StateBracket from './features/bracket/StateBracket';
 import StateResolution from './features/dashboard/StateResolution';
+import AccessGate from './components/AccessGate';
 
 function App() {
   return (
@@ -21,21 +22,26 @@ function App() {
         <Route path="/" element={<Navigate to="/estatal/dashboard" replace />} />
         
         <Route element={<Layout />}>
-          <Route path="/estatal/dashboard" element={<EstatalDashboard />} />
-          <Route path="/estatal/resolucion" element={<StateResolution />} />
-          <Route path="/estatal/bracket" element={<StateBracket />} />
-          <Route path="/estatal/partido/:matchId" element={<MatchScoreCapture />} />
-          <Route path="/regional/:regionId" element={<RegionalDashboard />} />
-          <Route path="/regional/:regionId/resolucion" element={<RegionalResolution />} />
-          <Route path="/regional/:regionId/bracket" element={<RegionalBracket />} />
-          <Route path="/regional/:regionId/partido/:matchId" element={<MatchScoreCapture />} />
+          <Route path="/estatal/dashboard" element={<AccessGate scope="state"><EstatalDashboard /></AccessGate>} />
+          <Route path="/estatal/resolucion" element={<AccessGate scope="state"><StateResolution /></AccessGate>} />
+          <Route path="/estatal/bracket" element={<AccessGate scope="state"><StateBracket /></AccessGate>} />
+          <Route path="/estatal/partido/:matchId" element={<AccessGate scope="state"><MatchScoreCapture /></AccessGate>} />
+          <Route path="/regional/:regionId" element={<AccessGate scope="regional"><RegionalDashboard /></AccessGate>} />
+          <Route path="/regional/:regionId/resolucion" element={<AccessGate scope="regional"><RegionalResolution /></AccessGate>} />
+          <Route path="/regional/:regionId/bracket" element={<AccessGate scope="regional"><RegionalBracket /></AccessGate>} />
+          <Route path="/regional/:regionId/partido/:matchId" element={<AccessGate scope="regional"><MatchScoreCapture /></AccessGate>} />
           
-          <Route path="/municipal/:id" element={<MunicipalSetup />} />
-          <Route path="/municipal/:id/registro" element={<ParticipantsRegistry />} />
-          <Route path="/municipal/:id/ruleta" element={<RouletteScreen />} />
-          <Route path="/municipal/:id/asignaciones" element={<AssignmentsBoard />} />
-          <Route path="/municipal/:id/bracket" element={<MunicipalBracket />} />
-          <Route path="/municipal/:id/partido/:matchId" element={<MatchScoreCapture />} />
+          <Route path="/municipal/:id" element={<AccessGate scope="municipal"><MunicipalSetup /></AccessGate>} />
+          <Route path="/municipal/:id/registro" element={<AccessGate scope="municipal"><ParticipantsRegistry /></AccessGate>} />
+          <Route path="/municipal/:id/ruleta" element={<AccessGate scope="municipal"><RouletteScreen /></AccessGate>} />
+          <Route path="/municipal/:id/asignaciones" element={<AccessGate scope="municipal"><AssignmentsBoard /></AccessGate>} />
+          <Route path="/municipal/:id/bracket" element={<AccessGate scope="municipal"><MunicipalBracket /></AccessGate>} />
+          <Route path="/municipal/:id/partido/:matchId" element={<AccessGate scope="municipal"><MatchScoreCapture /></AccessGate>} />
+          <Route path="/municipal/:id/evento/:eventId/registro" element={<AccessGate scope="municipal"><ParticipantsRegistry /></AccessGate>} />
+          <Route path="/municipal/:id/evento/:eventId/ruleta" element={<AccessGate scope="municipal"><RouletteScreen /></AccessGate>} />
+          <Route path="/municipal/:id/evento/:eventId/asignaciones" element={<AccessGate scope="municipal"><AssignmentsBoard /></AccessGate>} />
+          <Route path="/municipal/:id/evento/:eventId/bracket" element={<AccessGate scope="municipal"><MunicipalBracket /></AccessGate>} />
+          <Route path="/municipal/:id/evento/:eventId/partido/:matchId" element={<AccessGate scope="municipal"><MatchScoreCapture /></AccessGate>} />
         </Route>
 
         <Route path="*" element={<NotFound />} />

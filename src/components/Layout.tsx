@@ -1,6 +1,9 @@
-import { Outlet, Link } from 'react-router-dom';
+import { Link, Outlet } from 'react-router-dom';
+import { clearAccessSession, getAccessSession } from '../lib/accessSession';
 
 export default function Layout() {
+  const profile = getAccessSession();
+
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] font-sans">
       <header className="border-b border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-4 flex items-center justify-between shadow-md">
@@ -12,27 +15,45 @@ export default function Layout() {
         </div>
         <nav className="space-x-4">
           <Link to="/estatal/dashboard" className="text-[var(--color-muted)] hover:text-[var(--color-primary)] transition-colors">Estatal</Link>
-          {/* Link temporal para pruebas */}
-          <Link to="/municipal/mun-1" className="text-[var(--color-muted)] hover:text-[var(--color-primary)] transition-colors">Municipal (Demo)</Link>
+          {profile && (
+            <button
+              onClick={() => {
+                clearAccessSession();
+                window.location.reload();
+              }}
+              className="text-[var(--color-muted)] hover:text-[var(--color-primary)] transition-colors"
+            >
+              Salir
+            </button>
+          )}
         </nav>
       </header>
-      
+
       <div className="flex h-[calc(100vh-65px)]">
-        {/* Sidebar minimalista (puedes expandirlo luego) */}
         <aside className="w-64 border-r border-[var(--color-border)] bg-[var(--color-surface)] p-6 hidden md:block">
           <ul className="space-y-3">
             <li>
-              <div className="text-xs uppercase tracking-wider text-[var(--color-muted)] font-mono mb-2">Menú Operador</div>
+              <div className="text-xs uppercase tracking-wider text-[var(--color-muted)] font-mono mb-2">Menu operador</div>
             </li>
-            <li><Link to="/municipal/mun-1" className="block text-sm hover:text-[var(--color-primary)]">Mi municipio</Link></li>
-            <li><Link to="/municipal/mun-1/registro" className="block text-sm hover:text-[var(--color-primary)]">Registro</Link></li>
-            <li><Link to="/municipal/mun-1/ruleta" className="block text-sm hover:text-[var(--color-primary)]">Sorteo / Ruleta</Link></li>
-            <li><Link to="/municipal/mun-1/asignaciones" className="block text-sm hover:text-[var(--color-primary)]">Asignaciones</Link></li>
-            <li><Link to="/municipal/mun-1/bracket" className="block text-sm hover:text-[var(--color-primary)]">Bracket</Link></li>
+            {profile ? (
+              <>
+                <li className="text-sm text-[var(--color-text)]">{profile.display_name}</li>
+                {profile.role === 'municipal_operator' && profile.municipality_id && (
+                  <li><Link to={`/municipal/${profile.municipality_id}`} className="block text-sm hover:text-[var(--color-primary)]">Mi municipio</Link></li>
+                )}
+                {profile.role === 'regional_operator' && profile.region_id && (
+                  <li><Link to={`/regional/${profile.region_id}`} className="block text-sm hover:text-[var(--color-primary)]">Mi region</Link></li>
+                )}
+                {profile.role === 'state_committee' && (
+                  <li><Link to="/estatal/dashboard" className="block text-sm hover:text-[var(--color-primary)]">Dashboard estatal</Link></li>
+                )}
+              </>
+            ) : (
+              <li className="text-sm text-[var(--color-muted)]">Ingresa con PIN en la ruta asignada.</li>
+            )}
           </ul>
         </aside>
 
-        {/* Contenido principal */}
         <main className="flex-1 overflow-auto p-6 md:p-8">
           <Outlet />
         </main>

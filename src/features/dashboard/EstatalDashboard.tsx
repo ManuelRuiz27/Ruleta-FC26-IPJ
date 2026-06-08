@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTournamentStore } from '../../store';
 import { initialRegions } from '../../data/regions';
 import { initialMunicipalities } from '../../data/municipalities';
+import { initialMunicipalEvents } from '../../data/municipalEvents';
 import ExportPanel from '../exports/ExportPanel';
 import { exportToCSV, exportToJSON } from '../../lib/utils/exportUtils';
 import { seedAllMunicipalities } from '../../lib/utils/seed';
@@ -21,7 +22,7 @@ export default function EstatalDashboard() {
   const completedStateResults = useTournamentStore(state => state.completedStateResults);
   const qualifiedPlayers = useTournamentStore(state => state.qualifiedPlayers);
 
-  const totalMunicipalities = initialMunicipalities.length;
+  const totalMunicipalities = initialMunicipalEvents.length;
   const completedCount = allCompleted.length;
   const regionsWithActivity = new Set(allCompleted.map(r => r.region_id)).size;
   const qualifiedGenerated = completedCount * 2; // municipal champion and runner up
@@ -32,6 +33,8 @@ export default function EstatalDashboard() {
   
   const regionsData = initialRegions.map(region => {
     const regionMunicipalities = initialMunicipalities.filter(m => m.region_id === region.id);
+    const regionMunicipalityIds = regionMunicipalities.map(m => m.id);
+    const regionEvents = initialMunicipalEvents.filter(event => regionMunicipalityIds.includes(event.municipality_id));
     const completedInRegion = allCompleted.filter(r => r.region_id === region.id);
     const duplicates = getDuplicateTeamsByRegion(region.id);
     
@@ -39,7 +42,7 @@ export default function EstatalDashboard() {
 
     return {
       ...region,
-      totalCount: regionMunicipalities.length,
+      totalCount: regionEvents.length,
       completedCount: completedInRegion.length,
       qualifiedGenerated: completedInRegion.length * 2,
       duplicatesCount: duplicates.length

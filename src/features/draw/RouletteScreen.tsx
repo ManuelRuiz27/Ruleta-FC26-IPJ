@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTournamentStore } from '../../store';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Team } from '../../types';
+import { municipalRoute, resolveMunicipalEventId } from '../../lib/municipalRoutes';
 
 type WindowWithWebkitAudio = Window & typeof globalThis & {
   webkitAudioContext?: typeof AudioContext;
@@ -58,15 +59,16 @@ const playSuccessSound = () => {
 };
 
 export default function RouletteScreen() {
-  const { id } = useParams<{ id: string }>();
+  const { id, eventId } = useParams<{ id: string; eventId?: string }>();
   const navigate = useNavigate();
+  const activeEventId = resolveMunicipalEventId(id, eventId);
   
   const currentSession = useTournamentStore(state => state.currentSession);
   const startDraw = useTournamentStore(state => state.startDraw);
   const assignRandomTeamToParticipant = useTournamentStore(state => state.assignRandomTeamToParticipant);
   const getTeamById = useTournamentStore(state => state.getTeamById);
   const prepareDraftSessionForDraw = useTournamentStore(state => state.prepareDraftSessionForDraw);
-  const clearLocalTournamentState = useTournamentStore(state => state.clearLocalTournamentState);
+  const resetMunicipalSession = useTournamentStore(state => state.resetMunicipalSession);
 
   const allParticipants = useTournamentStore(state => state.participants);
   const assignments = useTournamentStore(state => state.assignments);
@@ -113,8 +115,8 @@ export default function RouletteScreen() {
 
   const handleReset = () => {
     if (window.confirm('¿Estás seguro de reiniciar la sesión local? Se perderán todos los participantes y asignaciones actuales.')) {
-      clearLocalTournamentState();
-      navigate(`/municipal/${id}/registro`);
+      resetMunicipalSession();
+      navigate(municipalRoute(id!, activeEventId, 'registro'));
     }
   };
 
@@ -124,7 +126,7 @@ export default function RouletteScreen() {
         <h2 className="text-2xl font-heading font-bold mb-4">Participantes insuficientes</h2>
         <p className="text-[var(--color-muted)] mb-8">Debes registrar al menos 8 participantes para iniciar el sorteo.</p>
         <button 
-          onClick={() => navigate(`/municipal/${id}/registro`)}
+          onClick={() => navigate(municipalRoute(id!, activeEventId, 'registro'))}
           className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-6 py-2 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity"
         >
           Ir a Registro
@@ -210,13 +212,13 @@ export default function RouletteScreen() {
         <div className="flex gap-4 flex-col items-center">
           <div className="flex gap-4">
             <button 
-              onClick={() => navigate(`/municipal/${id}/asignaciones`)}
+              onClick={() => navigate(municipalRoute(id!, activeEventId, 'asignaciones'))}
               className="bg-transparent border border-[var(--color-border)] text-[var(--color-text)] px-6 py-2 rounded-[2px] font-medium hover:bg-[#1b4028] transition-colors"
             >
               Ver Asignaciones
             </button>
             <button 
-              onClick={() => navigate(`/municipal/${id}/bracket`)}
+              onClick={() => navigate(municipalRoute(id!, activeEventId, 'bracket'))}
               className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-6 py-2 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity shadow-[0_0_15px_rgba(139,197,63,0.3)]"
             >
               Ir a bracket municipal
@@ -241,7 +243,7 @@ export default function RouletteScreen() {
         <p className="text-[var(--color-muted)] mb-12">Esta sesión ya se encuentra en fase de bracket o finalizada.</p>
         <div className="flex gap-4 flex-col items-center">
           <button 
-            onClick={() => navigate(`/municipal/${id}/bracket`)}
+            onClick={() => navigate(municipalRoute(id!, activeEventId, 'bracket'))}
             className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-6 py-2 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity"
           >
             Ver bracket

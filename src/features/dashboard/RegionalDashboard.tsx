@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTournamentStore } from '../../store';
 import { initialRegions } from '../../data/regions';
 import { initialMunicipalities } from '../../data/municipalities';
+import { initialMunicipalEvents } from '../../data/municipalEvents';
 import ExportPanel from '../exports/ExportPanel';
 import { exportToCSV, exportToJSON } from '../../lib/utils/exportUtils';
 
@@ -26,6 +27,8 @@ export default function RegionalDashboard() {
   }
 
   const regionMunicipalities = initialMunicipalities.filter(m => m.region_id === region.id);
+  const regionMunicipalityIds = regionMunicipalities.map(m => m.id);
+  const regionEvents = initialMunicipalEvents.filter(event => regionMunicipalityIds.includes(event.municipality_id));
   const completedResults = getCompletedMunicipalResultsByRegion(region.id);
 
   const readiness = getRegionReadiness(region.id);
@@ -108,13 +111,18 @@ export default function RegionalDashboard() {
               </tr>
             </thead>
             <tbody>
-              {regionMunicipalities.map(mun => {
-                const snapshot = completedResults.find(r => r.municipality_id === mun.id);
+              {regionEvents.map(event => {
+                const mun = regionMunicipalities.find(m => m.id === event.municipality_id);
+                const snapshot = completedResults.find(r => r.municipal_event_id === event.id || (!r.municipal_event_id && r.municipality_id === event.municipality_id));
                 const isCompleted = !!snapshot;
+                if (!mun) return null;
 
                 return (
-                  <tr key={mun.id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-border)]/20 transition-colors">
-                    <td className="p-4 font-medium">{mun.name}</td>
+                  <tr key={event.id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-border)]/20 transition-colors">
+                    <td className="p-4 font-medium">
+                      {mun.name}
+                      <div className="text-xs text-[var(--color-muted)]">{event.label}</div>
+                    </td>
                     <td className="p-4">
                       {isCompleted ? (
                         <span className="bg-green-500/20 text-green-400 px-2 py-1 rounded text-xs uppercase font-bold tracking-wider">Completado</span>

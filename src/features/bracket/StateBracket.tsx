@@ -16,7 +16,7 @@ export default function StateBracket() {
   const createStateSession = useTournamentStore(state => state.createStateSession);
   const generateStateBracket = useTournamentStore(state => state.generateStateBracket);
   const createCompletedStateResult = useTournamentStore(state => state.createCompletedStateResult);
-  const clearLocalTournamentState = useTournamentStore(state => state.clearLocalTournamentState);
+  const resetActiveSession = useTournamentStore(state => state.resetActiveSession);
 
   const readiness = getStateReadiness();
 
@@ -54,7 +54,7 @@ export default function StateBracket() {
   const handleCloseState = () => {
     try {
       createCompletedStateResult();
-      clearLocalTournamentState();
+      resetActiveSession();
       navigate(`/estatal/dashboard`);
     } catch (e: unknown) {
       alert(getErrorMessage(e));
@@ -108,7 +108,7 @@ export default function StateBracket() {
 
       {isCurrentSessionState && bracket && (
         <>
-          {isFinalCompleted && currentSession?.status === 'bracket_ready' && (
+          {isFinalCompleted && currentSession?.status === 'completed' && (
             <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-8 text-center mb-8">
               <h3 className="text-2xl font-bold text-green-400 mb-4">¡Torneo Estatal Finalizado!</h3>
               <p className="text-[var(--color-muted)] mb-6">El Campeón de Campeones ha sido definido.</p>
