@@ -8,6 +8,7 @@ export default function RegionalDashboard() {
   const navigate = useNavigate();
 
   const getCompletedMunicipalResultsByRegion = useTournamentStore(state => state.getCompletedMunicipalResultsByRegion);
+  const getRegionReadiness = useTournamentStore(state => state.getRegionReadiness);
 
   if (!regionId) return null;
 
@@ -24,7 +25,7 @@ export default function RegionalDashboard() {
   const regionMunicipalities = initialMunicipalities.filter(m => m.region_id === region.id);
   const completedResults = getCompletedMunicipalResultsByRegion(region.id);
 
-  const readiness = useTournamentStore(state => state.getRegionReadiness(region.id));
+  const readiness = getRegionReadiness(region.id);
 
   return (
     <div className="max-w-6xl mx-auto p-6">

@@ -490,11 +490,15 @@ export const useTournamentStore = create<TournamentState>()(
       resolveDuplicateTeam: (input) => {
         const { qualifiedPlayerId, newTeamId, keptByQualifiedPlayerId, reason } = input;
         const qp = get().qualifiedPlayers.find(q => q.id === qualifiedPlayerId);
-        if (!qp) throw new Error("Jugador clasificado no encontrado");
         
-        const availableTeams = get().getAvailableTeamsForRegion(qp.region_id!);
+        if (!qp) throw new Error("Jugador clasificado no encontrado.");
+        if (!qp.is_active) throw new Error("El jugador clasificado no está activo.");
+        if (!qp.region_id) throw new Error("El jugador no tiene región asignada.");
+        if (qp.team_id === newTeamId) throw new Error("La nueva selección no puede ser igual a la anterior.");
+        
+        const availableTeams = get().getAvailableTeamsForRegion(qp.region_id);
         if (!availableTeams.some(t => t.id === newTeamId)) {
-          throw new Error("El equipo seleccionado no está disponible en esta región");
+          throw new Error("La selección elegida ya está ocupada por otro clasificado activo en esta región.");
         }
 
         const previousTeamId = qp.team_id;

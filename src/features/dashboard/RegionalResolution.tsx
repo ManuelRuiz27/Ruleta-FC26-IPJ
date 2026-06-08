@@ -22,10 +22,16 @@ export default function RegionalResolution() {
   const duplicates = getDuplicateTeamsByRegion(region.id);
   const availableTeams = getAvailableTeamsForRegion(region.id);
 
-  const handleDrawKeeper = (teamId: string, occurrences: any[]) => {
-    const randomIdx = Math.floor(Math.random() * occurrences.length);
-    const selectedKeeper = occurrences[randomIdx].qualified_player_id;
+  const handleDrawKeeper = (teamId: string, candidates: any[]) => {
+    const randomIdx = Math.floor(Math.random() * candidates.length);
+    const selectedKeeper = candidates[randomIdx].qualified_player_id;
     setKeepers(prev => ({ ...prev, [teamId]: selectedKeeper }));
+  };
+
+  const getKeeperCandidates = (occurrences: any[]) => {
+    const champions = occurrences.filter(o => o.rank === 'champion');
+    if (champions.length > 0) return champions;
+    return occurrences;
   };
 
   const handleResolveAffected = (affectedPlayerId: string, keptByPlayerId: string | null) => {
@@ -80,15 +86,11 @@ export default function RegionalResolution() {
       ) : (
         <div className="space-y-6">
           {duplicates.map(dup => {
-            const hasChampion = dup.occurrences.some(o => o.rank === 'champion');
-            const hasRunnerUp = dup.occurrences.some(o => o.rank === 'runner_up');
-            const isMixed = hasChampion && hasRunnerUp;
+            const keeperCandidates = getKeeperCandidates(dup.occurrences);
             
-            // Determine who keeps it
             let keeperId: string | null = null;
-            if (isMixed) {
-              const championOcc = dup.occurrences.find(o => o.rank === 'champion');
-              keeperId = championOcc ? championOcc.qualified_player_id : null;
+            if (keeperCandidates.length === 1) {
+              keeperId = keeperCandidates[0].qualified_player_id;
             } else {
               keeperId = keepers[dup.team_id] || null;
             }
@@ -99,10 +101,13 @@ export default function RegionalResolution() {
                   <div>
                     <h3 className="text-xl font-heading font-bold text-red-400">Selección en conflicto: {dup.team_name}</h3>
                     <p className="text-sm text-[var(--color-muted)] mt-1">{dup.occurrences.length} ocurrencias detectadas</p>
+                    {!keeperId && keeperCandidates.length > 1 && (
+                      <p className="text-sm text-orange-400 mt-2 font-bold">Hay varios clasificados con la misma prioridad. Sortea quién conserva la selección.</p>
+                    )}
                   </div>
-                  {!keeperId && !isMixed && (
+                  {!keeperId && keeperCandidates.length > 1 && (
                     <button 
-                      onClick={() => handleDrawKeeper(dup.team_id, dup.occurrences)}
+                      onClick={() => handleDrawKeeper(dup.team_id, keeperCandidates)}
                       className="px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white rounded text-sm transition-colors font-bold"
                     >
                       Sortear quién conserva
@@ -130,7 +135,7 @@ export default function RegionalResolution() {
                         {isKeeper && (
                           <div className="text-green-400 text-sm font-bold flex items-center gap-2">
                             <span>🛡️ Conserva selección</span>
-                            {isMixed && <span className="text-xs opacity-75 font-normal">(Prioridad por ser Campeón)</span>}
+                            {keeperCandidates.length === 1 && <span className="text-xs opacity-75 font-normal">(Conserva por prioridad competitiva)</span>}
                           </div>
                         )}
 
