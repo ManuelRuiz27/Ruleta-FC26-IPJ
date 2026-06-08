@@ -44,7 +44,24 @@ Este repositorio contiene la Base Funcional (Primera Entrega) implementada en Re
 - `src/lib/`: Adaptadores, integraciones y utilidades (Ej: cliente de Supabase).
 - `src/data/`: Datos iniciales (semillas temporales) para regiones, municipios y selecciones.
 
-## Despliegue
-El proyecto está preparado para ser desplegado en Cloudflare Pages conectando este repositorio.
-Comando de build: `npm run build`
-Directorio de salida: `dist`
+## Notas Importantes para Producción / Staging
+
+⚠️ **Limitaciones Actuales de Almacenamiento (Local Storage)**
+Actualmente la aplicación opera al 100% en el frontend utilizando Zustand con persistencia en `localStorage`. Por lo tanto:
+- Los datos viven **exclusivamente en el navegador** de la computadora donde se ejecuta.
+- Para operación multi-dispositivo en tiempo real se requiere implementar la conexión final con Supabase/backend.
+- Para ambientes de **staging** o uso demostrativo, se recomienda usar **una sola laptop operadora** para centralizar todos los datos.
+- Antes de cada evento o prueba mayor, se debe **exportar un respaldo manual** o respaldar el contenido de `localStorage`.
+
+## Deployment (Despliegue Estático SPA)
+
+El proyecto está preparado para ser desplegado como una Single Page Application (SPA) usando Vite en plataformas estáticas como:
+- **Cloudflare Pages**
+- **Netlify**
+- **Vercel**
+
+**Configuración de Build:**
+- **Build command:** `npm run build`
+- **Output directory:** `dist`
+
+Asegúrate de configurar las reglas de reescritura de tu proveedor de hosting para redirigir todas las rutas a `index.html` y permitir que React Router maneje la navegación internamente.

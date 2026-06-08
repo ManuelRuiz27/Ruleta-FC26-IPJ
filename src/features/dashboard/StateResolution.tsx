@@ -10,7 +10,7 @@ export default function StateResolution() {
   const resolveDuplicateTeam = useTournamentStore(state => state.resolveDuplicateTeam);
   
   // Suscripción reactiva para que el componente se actualice cuando se resuelva un conflicto
-  const qualifiedPlayers = useTournamentStore(state => state.qualifiedPlayers);
+  useTournamentStore(state => state.qualifiedPlayers);
 
   // Local state to keep track of randomly selected keepers for same-rank conflicts
   const [keepers, setKeepers] = useState<Record<string, string>>({}); // team_id -> qualified_player_id

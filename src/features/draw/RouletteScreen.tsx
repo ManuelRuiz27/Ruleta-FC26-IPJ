@@ -37,7 +37,9 @@ const playSuccessSound = () => {
       oscillator.start(audioCtx.currentTime + i * 0.05);
       oscillator.stop(audioCtx.currentTime + 1.5);
     });
-  } catch (e) {}
+  } catch (e) {
+    /* ignore audio errors */
+  }
 };
 
 export default function RouletteScreen() {
@@ -48,6 +50,8 @@ export default function RouletteScreen() {
   const startDraw = useTournamentStore(state => state.startDraw);
   const assignRandomTeamToParticipant = useTournamentStore(state => state.assignRandomTeamToParticipant);
   const getTeamById = useTournamentStore(state => state.getTeamById);
+  const prepareDraftSessionForDraw = useTournamentStore(state => state.prepareDraftSessionForDraw);
+  const clearLocalTournamentState = useTournamentStore(state => state.clearLocalTournamentState);
 
   const allParticipants = useTournamentStore(state => state.participants);
   const assignments = useTournamentStore(state => state.assignments);
@@ -87,11 +91,10 @@ export default function RouletteScreen() {
       for (let i = 0; i < 8; i++) {
         display.push(shuffled[i % shuffled.length]);
       }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       setWheelTeams(display);
     }
   }, [availableTeams, isSpinning]);
-
-  const clearLocalTournamentState = useTournamentStore(state => state.clearLocalTournamentState);
 
   const handleReset = () => {
     if (window.confirm('¿Estás seguro de reiniciar la sesión local? Se perderán todos los participantes y asignaciones actuales.')) {
@@ -114,8 +117,6 @@ export default function RouletteScreen() {
       </div>
     );
   }
-
-  const prepareDraftSessionForDraw = useTournamentStore(state => state.prepareDraftSessionForDraw);
 
   if (currentSession.status === 'draft') {
     return (

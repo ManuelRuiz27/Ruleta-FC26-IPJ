@@ -51,7 +51,7 @@ export const seedAllMunicipalities = async () => {
       readyMatches.forEach(match => {
         // Marcador aleatorio sin empate
         let scoreA = Math.floor(Math.random() * 5);
-        let scoreB = Math.floor(Math.random() * 5);
+        const scoreB = Math.floor(Math.random() * 5);
         if (scoreA === scoreB) scoreA += 1;
         
         const winnerId = scoreA > scoreB ? match.player_a_id! : match.player_b_id!;

@@ -35,7 +35,6 @@ export default function MunicipalBracket() {
   
   const currentSession = useTournamentStore(state => state.currentSession);
   const bracket = useTournamentStore(state => state.bracket);
-  const allMatches = useTournamentStore(state => state.matches);
   const getMatchesByRound = useTournamentStore(state => state.getMatchesByRound);
   const matchesByRound = getMatchesByRound();
   
@@ -182,7 +181,7 @@ export default function MunicipalBracket() {
           )}
         </div>
         );
-      })}
+      })()}
 
       <div className="grid grid-cols-4 gap-4 mb-8">
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 flex flex-col items-center">
