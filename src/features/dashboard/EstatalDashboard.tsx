@@ -6,6 +6,8 @@ import { initialMunicipalEvents } from '../../data/municipalEvents';
 import ExportPanel from '../exports/ExportPanel';
 import { exportToCSV, exportToJSON } from '../../lib/utils/exportUtils';
 import { seedAllMunicipalities } from '../../lib/utils/seed';
+import { deleteAllCloudRecords } from '../../lib/supabaseSync';
+import { getAccessSession } from '../../lib/accessSession';
 
 const getErrorMessage = (err: unknown) => err instanceof Error ? err.message : 'Ocurrió un error inesperado.';
 
@@ -28,6 +30,8 @@ export default function EstatalDashboard() {
   const qualifiedGenerated = completedCount * 2; // municipal champion and runner up
 
   const stateReadiness = getStateReadiness();
+  const accessProfile = getAccessSession();
+  const canUseStateAdminTools = accessProfile?.role === 'state_committee';
 
   let regionsWithDuplicates = 0;
   
@@ -53,6 +57,7 @@ export default function EstatalDashboard() {
     <div className="max-w-6xl mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-heading font-bold">Dashboard Estatal</h2>
+        {canUseStateAdminTools && (
         <div className="flex gap-3">
           <button 
             onClick={async () => {
@@ -75,7 +80,26 @@ export default function EstatalDashboard() {
           >
             🗑 Reset BD
           </button>
+          <button
+            onClick={async () => {
+              const confirmation = prompt('Esto borra TODO el torneo en Supabase y este navegador. Escribe REINICIAR para confirmar.');
+              if (confirmation !== 'REINICIAR') return;
+
+              try {
+                await deleteAllCloudRecords();
+                useTournamentStore.getState().clearLocalTournamentState();
+                alert('Torneo reiniciado en Supabase y estado local.');
+                window.location.reload();
+              } catch (error: unknown) {
+                alert(getErrorMessage(error));
+              }
+            }}
+            className="text-xs font-mono bg-red-950 text-red-200 border border-red-500 px-3 py-1 rounded hover:bg-red-900"
+          >
+            Reiniciar torneo
+          </button>
         </div>
+        )}
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">

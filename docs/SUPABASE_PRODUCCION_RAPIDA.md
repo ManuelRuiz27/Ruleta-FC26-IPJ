@@ -56,6 +56,17 @@ npx vercel --prod
 4. Abrir dashboard regional desde otro navegador.
 5. Confirmar que aparecen clasificados/resultados.
 
+## 5. Reiniciar torneo de pruebas
+
+Desde el acceso estatal:
+
+1. Abrir `/estatal/dashboard`.
+2. Entrar con PIN estatal.
+3. Presionar `Reiniciar torneo`.
+4. Escribir `REINICIAR` para confirmar.
+
+Esto borra `tournament_records` en Supabase y limpia el estado local del navegador actual. Otros navegadores deben recargar o usar `Reset BD` para limpiar su cache local.
+
 ## Nota de seguridad
 
 Este modo es MVP rapido con anon key y RLS limitado para escrituras de registros del torneo. Para endurecer seguridad antes de una operacion larga, migrar PINs a Supabase Auth o Edge Function con `pin_hash` y politicas por rol.

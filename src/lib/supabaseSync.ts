@@ -76,3 +76,14 @@ export const upsertCloudRecords = async (records: CloudRecord[]) => {
 
   if (error) throw error;
 };
+
+export const deleteAllCloudRecords = async () => {
+  if (!supabase) throw new Error('Supabase no esta configurado.');
+
+  const { error } = await supabase
+    .from('tournament_records')
+    .delete()
+    .neq('record_type', '__never__');
+
+  if (error) throw error;
+};
