@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { 
   Region, Municipality, Team, DrawSession, Participant, Assignment, 
-  Bracket, Match, RoundType, QualifiedPlayer 
+  Bracket, Match, RoundType, QualifiedPlayer, CompletedMunicipalResult 
 } from '../types';
 import { initialRegions } from '../data/regions';
 import { initialMunicipalities } from '../data/municipalities';
@@ -26,6 +26,7 @@ interface TournamentState {
   resetMunicipalSession: () => void;
   clearLocalTournamentState: () => void;
   qualifiedPlayers: QualifiedPlayer[];
+  completedMunicipalResults: CompletedMunicipalResult[];
 
   prepareDraftSessionForDraw: () => void;
   startDraw: () => void;
@@ -43,6 +44,7 @@ interface TournamentState {
   }) => void;
   advanceWinnerToNextMatch: (matchId: string, winnerId: string) => void;
   createMunicipalQualifiedPlayers: () => void;
+  createCompletedMunicipalResult: () => void;
   
   setParticipants: (participants: Participant[]) => void;
   addParticipant: (participant: Participant) => void;
@@ -71,6 +73,18 @@ interface TournamentState {
   getPendingParticipants: () => Participant[];
   getQualifiedPlayersForCurrentSession: () => QualifiedPlayer[];
   getQualifiedPlayersByRegion: (regionId: string) => QualifiedPlayer[];
+  getAllCompletedMunicipalResults: () => CompletedMunicipalResult[];
+  getCompletedMunicipalResultsByRegion: (regionId: string) => CompletedMunicipalResult[];
+  getDuplicateTeamsByRegion: (regionId: string) => Array<{
+    team_id: string;
+    team_name: string;
+    occurrences: Array<{
+      municipality_id: string;
+      municipality_name: string;
+      participant_name: string;
+      rank: 'champion' | 'runner_up';
+    }>;
+  }>;
   getAvailableTeams: () => Team[];
   validateParticipantNames: (names: string[]) => { valid: boolean; errors: string[] };
 }
@@ -88,6 +102,7 @@ export const useTournamentStore = create<TournamentState>()(
       bracket: null,
       matches: [],
       qualifiedPlayers: [],
+      completedMunicipalResults: [],
 
       setCurrentSession: (session) => set({ currentSession: session }),
       createMunicipalSession: (municipalityId, regionId) => {
@@ -109,11 +124,11 @@ export const useTournamentStore = create<TournamentState>()(
           deleted_at: null,
           created_at: new Date().toISOString()
         };
-        set({ currentSession: session, participants: [], assignments: [], bracket: null, matches: [], qualifiedPlayers: [] });
+        set({ currentSession: session, participants: [], assignments: [], bracket: null, matches: [] });
         return session;
       },
-      resetMunicipalSession: () => set({ currentSession: null, participants: [], assignments: [], bracket: null, matches: [], qualifiedPlayers: [] }),
-      clearLocalTournamentState: () => set({ currentSession: null, participants: [], assignments: [], bracket: null, matches: [], qualifiedPlayers: [] }),
+      resetMunicipalSession: () => set({ currentSession: null, participants: [], assignments: [], bracket: null, matches: [] }),
+      clearLocalTournamentState: () => set({ currentSession: null, participants: [], assignments: [], bracket: null, matches: [], qualifiedPlayers: [], completedMunicipalResults: [] }),
       
       prepareDraftSessionForDraw: () => {
         const session = get().currentSession;
@@ -337,7 +352,10 @@ export const useTournamentStore = create<TournamentState>()(
           currentSession: currentSession ? { ...currentSession, status: nextStatus as any, completed_at: sessionCompleted ? new Date().toISOString() : currentSession.completed_at } : null
         }));
 
-        if (sessionCompleted) get().createMunicipalQualifiedPlayers();
+        if (sessionCompleted) {
+          get().createMunicipalQualifiedPlayers();
+          get().createCompletedMunicipalResult();
+        }
       },
 
       submitMatchResult: (input) => {
@@ -386,6 +404,71 @@ export const useTournamentStore = create<TournamentState>()(
           { id: crypto.randomUUID(), source_session_id: session.id, target_stage: 'regional', participant_id: runnerUp.id, municipality_id: session.municipality_id, region_id: session.region_id, team_id: runnerUpAssignment.team_id, rank: 'runner_up', is_active: true, created_at: new Date().toISOString() }
         ];
         set(state => ({ qualifiedPlayers: [...state.qualifiedPlayers, ...newQPs] }));
+      },
+
+      createCompletedMunicipalResult: () => {
+        const session = get().currentSession;
+        if (!session || session.stage !== 'municipal' || session.status !== 'completed') return;
+        
+        if (get().completedMunicipalResults.some(r => r.source_session_id === session.id)) return;
+        
+        const { champion, runnerUp } = get().getChampionAndRunnerUp();
+        if (!champion || !runnerUp) return;
+        
+        const championAssignment = get().getParticipantAssignment(champion.id);
+        const runnerUpAssignment = get().getParticipantAssignment(runnerUp.id);
+        if (!championAssignment || !runnerUpAssignment) return;
+        
+        const championTeam = get().getTeamById(championAssignment.team_id);
+        const runnerUpTeam = get().getTeamById(runnerUpAssignment.team_id);
+        if (!championTeam || !runnerUpTeam) return;
+
+        const municipality = get().getMunicipalityById(session.municipality_id!);
+        const region = get().getRegionById(session.region_id!);
+        if (!municipality || !region) return;
+
+        const bracket = get().bracket;
+        if (!bracket) return;
+
+        const finalMatch = get().matches.find(m => m.round === 'final');
+        if (!finalMatch) return;
+
+        let decisionMethod: CompletedMunicipalResult['final_decision_method'] = 'unknown';
+        if (!finalMatch.player_b_id) decisionMethod = 'bye';
+        else if (finalMatch.penalties_played) decisionMethod = 'penalties';
+        else if (finalMatch.extra_time_played) decisionMethod = 'extra_time';
+        else if (finalMatch.regular_score_a != null && finalMatch.regular_score_b != null) decisionMethod = 'regular';
+
+        const result: CompletedMunicipalResult = {
+          id: crypto.randomUUID(),
+          source_session_id: session.id,
+          municipality_id: municipality.id,
+          municipality_name: municipality.name,
+          region_id: region.id,
+          region_name: region.name,
+          completed_at: session.completed_at || new Date().toISOString(),
+          participant_count: bracket.participant_count,
+          bracket_size: bracket.bracket_size,
+          bye_count: bracket.bye_count,
+          champion_participant_id: champion.id,
+          champion_name: champion.display_name,
+          champion_team_id: championTeam.id,
+          champion_team_name: championTeam.name,
+          runner_up_participant_id: runnerUp.id,
+          runner_up_name: runnerUp.display_name,
+          runner_up_team_id: runnerUpTeam.id,
+          runner_up_team_name: runnerUpTeam.name,
+          final_match_id: finalMatch.id,
+          final_regular_score_champion: finalMatch.winner_id === finalMatch.player_a_id ? finalMatch.regular_score_a : finalMatch.regular_score_b,
+          final_regular_score_runner_up: finalMatch.loser_id === finalMatch.player_a_id ? finalMatch.regular_score_a : finalMatch.regular_score_b,
+          final_extra_time_played: finalMatch.extra_time_played,
+          final_penalties_played: finalMatch.penalties_played,
+          final_penalties_score_champion: finalMatch.winner_id === finalMatch.player_a_id ? finalMatch.penalties_score_a : finalMatch.penalties_score_b,
+          final_penalties_score_runner_up: finalMatch.loser_id === finalMatch.player_a_id ? finalMatch.penalties_score_a : finalMatch.penalties_score_b,
+          final_decision_method: decisionMethod
+        };
+
+        set(state => ({ completedMunicipalResults: [...state.completedMunicipalResults, result] }));
       },
 
       setParticipants: (participants) => set({ participants }),
@@ -452,6 +535,36 @@ export const useTournamentStore = create<TournamentState>()(
       getQualifiedPlayersByRegion: (regionId) => {
         return get().qualifiedPlayers.filter(qp => qp.region_id === regionId);
       },
+
+      getAllCompletedMunicipalResults: () => get().completedMunicipalResults,
+      
+      getCompletedMunicipalResultsByRegion: (regionId) => get().completedMunicipalResults.filter(r => r.region_id === regionId),
+      
+      getDuplicateTeamsByRegion: (regionId) => {
+        const results = get().completedMunicipalResults.filter(r => r.region_id === regionId);
+        const map = new Map<string, Array<{ municipality_id: string; municipality_name: string; participant_name: string; rank: 'champion' | 'runner_up' }>>();
+        
+        results.forEach(r => {
+          const champList = map.get(r.champion_team_id) || [];
+          champList.push({ municipality_id: r.municipality_id, municipality_name: r.municipality_name, participant_name: r.champion_name, rank: 'champion' });
+          map.set(r.champion_team_id, champList);
+
+          const runnerUpList = map.get(r.runner_up_team_id) || [];
+          runnerUpList.push({ municipality_id: r.municipality_id, municipality_name: r.municipality_name, participant_name: r.runner_up_name, rank: 'runner_up' });
+          map.set(r.runner_up_team_id, runnerUpList);
+        });
+
+        const duplicates: ReturnType<TournamentState['getDuplicateTeamsByRegion']> = [];
+        map.forEach((occurrences, teamId) => {
+          if (occurrences.length > 1) {
+            const team = get().getTeamById(teamId);
+            if (team) {
+              duplicates.push({ team_id: team.id, team_name: team.name, occurrences });
+            }
+          }
+        });
+        return duplicates;
+      },
       
       getAvailableTeams: () => {
         const session = get().currentSession;
@@ -487,7 +600,8 @@ export const useTournamentStore = create<TournamentState>()(
         assignments: state.assignments,
         bracket: state.bracket,
         matches: state.matches,
-        qualifiedPlayers: state.qualifiedPlayers
+        qualifiedPlayers: state.qualifiedPlayers,
+        completedMunicipalResults: state.completedMunicipalResults
       }),
     }
   )
