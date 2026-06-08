@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { 
   Region, Municipality, Team, DrawSession, Participant, Assignment, 
-  Bracket, Match, RoundType, QualifiedPlayer, CompletedMunicipalResult 
+  Bracket, Match, RoundType, QualifiedPlayer, CompletedMunicipalResult, TeamReassignment 
 } from '../types';
 import { initialRegions } from '../data/regions';
 import { initialMunicipalities } from '../data/municipalities';
@@ -27,6 +27,7 @@ interface TournamentState {
   clearLocalTournamentState: () => void;
   qualifiedPlayers: QualifiedPlayer[];
   completedMunicipalResults: CompletedMunicipalResult[];
+  teamReassignments: TeamReassignment[];
 
   prepareDraftSessionForDraw: () => void;
   startDraw: () => void;
@@ -45,6 +46,7 @@ interface TournamentState {
   advanceWinnerToNextMatch: (matchId: string, winnerId: string) => void;
   createMunicipalQualifiedPlayers: () => void;
   createCompletedMunicipalResult: () => void;
+  resolveDuplicateTeam: (input: { qualifiedPlayerId: string; newTeamId: string; keptByQualifiedPlayerId: string | null; reason: string; }) => void;
   
   setParticipants: (participants: Participant[]) => void;
   addParticipant: (participant: Participant) => void;
@@ -79,12 +81,25 @@ interface TournamentState {
     team_id: string;
     team_name: string;
     occurrences: Array<{
+      qualified_player_id: string;
       municipality_id: string;
       municipality_name: string;
       participant_name: string;
       rank: 'champion' | 'runner_up';
+      team_id: string;
+      team_name: string;
     }>;
   }>;
+  getAvailableTeamsForRegion: (regionId: string) => Team[];
+  getRegionReadiness: (regionId: string) => {
+    isReady: boolean;
+    totalMunicipalities: number;
+    completedMunicipalities: number;
+    expectedQualifiedPlayers: number;
+    actualQualifiedPlayers: number;
+    duplicateGroups: number;
+    pendingMunicipalities: number;
+  };
   getAvailableTeams: () => Team[];
   validateParticipantNames: (names: string[]) => { valid: boolean; errors: string[] };
 }
@@ -103,6 +118,7 @@ export const useTournamentStore = create<TournamentState>()(
       matches: [],
       qualifiedPlayers: [],
       completedMunicipalResults: [],
+      teamReassignments: [],
 
       setCurrentSession: (session) => set({ currentSession: session }),
       createMunicipalSession: (municipalityId, regionId) => {
@@ -128,7 +144,7 @@ export const useTournamentStore = create<TournamentState>()(
         return session;
       },
       resetMunicipalSession: () => set({ currentSession: null, participants: [], assignments: [], bracket: null, matches: [] }),
-      clearLocalTournamentState: () => set({ currentSession: null, participants: [], assignments: [], bracket: null, matches: [], qualifiedPlayers: [], completedMunicipalResults: [] }),
+      clearLocalTournamentState: () => set({ currentSession: null, participants: [], assignments: [], bracket: null, matches: [], qualifiedPlayers: [], completedMunicipalResults: [], teamReassignments: [] }),
       
       prepareDraftSessionForDraw: () => {
         const session = get().currentSession;
@@ -471,6 +487,42 @@ export const useTournamentStore = create<TournamentState>()(
         set(state => ({ completedMunicipalResults: [...state.completedMunicipalResults, result] }));
       },
 
+      resolveDuplicateTeam: (input) => {
+        const { qualifiedPlayerId, newTeamId, keptByQualifiedPlayerId, reason } = input;
+        const qp = get().qualifiedPlayers.find(q => q.id === qualifiedPlayerId);
+        if (!qp) throw new Error("Jugador clasificado no encontrado");
+        
+        const availableTeams = get().getAvailableTeamsForRegion(qp.region_id!);
+        if (!availableTeams.some(t => t.id === newTeamId)) {
+          throw new Error("El equipo seleccionado no está disponible en esta región");
+        }
+
+        const previousTeamId = qp.team_id;
+        
+        set(state => ({
+          qualifiedPlayers: state.qualifiedPlayers.map(q => 
+            q.id === qualifiedPlayerId ? { ...q, team_id: newTeamId } : q
+          )
+        }));
+
+        const reassignment: TeamReassignment = {
+          id: crypto.randomUUID(),
+          stage: 'regional',
+          session_id: null,
+          qualified_player_id: qualifiedPlayerId,
+          previous_team_id: previousTeamId,
+          new_team_id: newTeamId,
+          kept_by_qualified_player_id: keptByQualifiedPlayerId,
+          reason,
+          resolved_by: null,
+          resolved_at: new Date().toISOString()
+        };
+
+        set(state => ({
+          teamReassignments: [...state.teamReassignments, reassignment]
+        }));
+      },
+
       setParticipants: (participants) => set({ participants }),
       addParticipant: (participant) => set((state) => ({ participants: [...state.participants, participant] })),
       updateParticipant: (id, data) => set((state) => ({ participants: state.participants.map(p => p.id === id ? { ...p, ...data } : p) })),
@@ -541,17 +593,31 @@ export const useTournamentStore = create<TournamentState>()(
       getCompletedMunicipalResultsByRegion: (regionId) => get().completedMunicipalResults.filter(r => r.region_id === regionId),
       
       getDuplicateTeamsByRegion: (regionId) => {
-        const results = get().completedMunicipalResults.filter(r => r.region_id === regionId);
-        const map = new Map<string, Array<{ municipality_id: string; municipality_name: string; participant_name: string; rank: 'champion' | 'runner_up' }>>();
+        const activeQps = get().qualifiedPlayers.filter(qp => qp.region_id === regionId && qp.is_active);
+        const map = new Map<string, Array<{ qualified_player_id: string; municipality_id: string; municipality_name: string; participant_name: string; rank: 'champion' | 'runner_up'; team_id: string; team_name: string }>>();
         
-        results.forEach(r => {
-          const champList = map.get(r.champion_team_id) || [];
-          champList.push({ municipality_id: r.municipality_id, municipality_name: r.municipality_name, participant_name: r.champion_name, rank: 'champion' });
-          map.set(r.champion_team_id, champList);
+        activeQps.forEach(qp => {
+          const team = get().getTeamById(qp.team_id);
+          const municipality = get().getMunicipalityById(qp.municipality_id!);
+          const snapshot = get().completedMunicipalResults.find(r => r.source_session_id === qp.source_session_id);
+          let participantName = "Desconocido";
+          if (snapshot) {
+            participantName = qp.rank === 'champion' ? snapshot.champion_name : snapshot.runner_up_name;
+          }
 
-          const runnerUpList = map.get(r.runner_up_team_id) || [];
-          runnerUpList.push({ municipality_id: r.municipality_id, municipality_name: r.municipality_name, participant_name: r.runner_up_name, rank: 'runner_up' });
-          map.set(r.runner_up_team_id, runnerUpList);
+          if (team && municipality) {
+            const list = map.get(team.id) || [];
+            list.push({
+              qualified_player_id: qp.id,
+              municipality_id: municipality.id,
+              municipality_name: municipality.name,
+              participant_name: participantName,
+              rank: qp.rank as 'champion' | 'runner_up',
+              team_id: team.id,
+              team_name: team.name
+            });
+            map.set(team.id, list);
+          }
         });
 
         const duplicates: ReturnType<TournamentState['getDuplicateTeamsByRegion']> = [];
@@ -564,6 +630,31 @@ export const useTournamentStore = create<TournamentState>()(
           }
         });
         return duplicates;
+      },
+      
+      getAvailableTeamsForRegion: (regionId) => {
+        const activeQps = get().qualifiedPlayers.filter(qp => qp.region_id === regionId && qp.is_active);
+        const usedTeamIds = activeQps.map(qp => qp.team_id);
+        return get().teams.filter(t => t.is_active !== false && !usedTeamIds.includes(t.id));
+      },
+
+      getRegionReadiness: (regionId) => {
+        const totalMunicipalities = get().municipalities.filter(m => m.region_id === regionId).length;
+        const completedMunicipalities = get().completedMunicipalResults.filter(r => r.region_id === regionId).length;
+        const expectedQualifiedPlayers = completedMunicipalities * 2;
+        const actualQualifiedPlayers = get().qualifiedPlayers.filter(qp => qp.region_id === regionId && qp.is_active).length;
+        const duplicateGroups = get().getDuplicateTeamsByRegion(regionId).length;
+        const pendingMunicipalities = totalMunicipalities - completedMunicipalities;
+
+        return {
+          isReady: completedMunicipalities > 0 && completedMunicipalities === totalMunicipalities && duplicateGroups === 0,
+          totalMunicipalities,
+          completedMunicipalities,
+          expectedQualifiedPlayers,
+          actualQualifiedPlayers,
+          duplicateGroups,
+          pendingMunicipalities
+        };
       },
       
       getAvailableTeams: () => {
@@ -601,7 +692,8 @@ export const useTournamentStore = create<TournamentState>()(
         bracket: state.bracket,
         matches: state.matches,
         qualifiedPlayers: state.qualifiedPlayers,
-        completedMunicipalResults: state.completedMunicipalResults
+        completedMunicipalResults: state.completedMunicipalResults,
+        teamReassignments: state.teamReassignments
       }),
     }
   )

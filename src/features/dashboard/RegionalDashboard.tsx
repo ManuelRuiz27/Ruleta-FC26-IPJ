@@ -8,7 +8,6 @@ export default function RegionalDashboard() {
   const navigate = useNavigate();
 
   const getCompletedMunicipalResultsByRegion = useTournamentStore(state => state.getCompletedMunicipalResultsByRegion);
-  const getDuplicateTeamsByRegion = useTournamentStore(state => state.getDuplicateTeamsByRegion);
 
   if (!regionId) return null;
 
@@ -24,12 +23,8 @@ export default function RegionalDashboard() {
 
   const regionMunicipalities = initialMunicipalities.filter(m => m.region_id === region.id);
   const completedResults = getCompletedMunicipalResultsByRegion(region.id);
-  const duplicates = getDuplicateTeamsByRegion(region.id);
 
-  const totalMunicipalities = regionMunicipalities.length;
-  const completedCount = completedResults.length;
-  const qualifiedGenerated = completedCount * 2;
-  const pendingCount = totalMunicipalities - completedCount;
+  const readiness = useTournamentStore(state => state.getRegionReadiness(region.id));
 
   return (
     <div className="max-w-6xl mx-auto p-6">
@@ -46,60 +41,46 @@ export default function RegionalDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4">
           <div className="text-sm text-[var(--color-muted)] font-mono mb-1">Avance Municipal</div>
-          <div className="text-3xl font-bold">{completedCount} / {totalMunicipalities}</div>
+          <div className="text-3xl font-bold">{readiness.completedMunicipalities} / {readiness.totalMunicipalities}</div>
         </div>
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4">
           <div className="text-sm text-[var(--color-muted)] font-mono mb-1">Municipios Pendientes</div>
-          <div className="text-3xl font-bold text-orange-400">{pendingCount}</div>
+          <div className="text-3xl font-bold text-orange-400">{readiness.pendingMunicipalities}</div>
         </div>
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4">
-          <div className="text-sm text-[var(--color-muted)] font-mono mb-1">Clasificados Esperados</div>
-          <div className="text-3xl font-bold text-green-400">{qualifiedGenerated}</div>
+          <div className="text-sm text-[var(--color-muted)] font-mono mb-1">Clasificados Regionales</div>
+          <div className="text-3xl font-bold text-green-400">{readiness.actualQualifiedPlayers} / {readiness.expectedQualifiedPlayers}</div>
         </div>
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4">
           <div className="text-sm text-[var(--color-muted)] font-mono mb-1">Duplicados Detectados</div>
-          <div className={`text-3xl font-bold ${duplicates.length > 0 ? 'text-red-400' : 'text-green-400'}`}>
-            {duplicates.length}
+          <div className={`text-3xl font-bold ${readiness.duplicateGroups > 0 ? 'text-red-400' : 'text-green-400'}`}>
+            {readiness.duplicateGroups}
           </div>
         </div>
       </div>
 
-      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6 mb-8">
-        <h3 className="text-lg font-heading font-bold mb-4 text-red-400 flex items-center gap-2">
-          <span>⚠️ Alertas de Colisión de Selecciones</span>
-        </h3>
-        
-        {duplicates.length === 0 ? (
-          <p className="text-[var(--color-muted)]">Sin duplicados de selección en esta región.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {duplicates.map(dup => (
-              <div key={dup.team_id} className="border border-red-500/30 bg-red-500/10 rounded-lg p-4">
-                <div className="flex justify-between items-center mb-3">
-                  <div className="font-bold text-lg">{dup.team_name}</div>
-                  <div className="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-xs font-mono font-bold">
-                    {dup.occurrences.length} ocurrencias
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  {dup.occurrences.map((occ, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-sm border-t border-red-500/20 pt-2">
-                      <div>
-                        <span className="font-medium">{occ.participant_name}</span>
-                        <span className="text-[var(--color-muted)] mx-2">en</span>
-                        <span className="italic">{occ.municipality_name}</span>
-                      </div>
-                      <span className={`text-xs px-2 py-0.5 rounded uppercase font-bold ${occ.rank === 'champion' ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-500/20 text-slate-300'}`}>
-                        {occ.rank === 'champion' ? 'Campeón' : 'Subcampeón'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+      {readiness.isReady && (
+        <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-6 mb-8 flex items-center justify-between">
+          <div className="flex items-center gap-3 text-green-400 font-bold text-lg">
+            <span>✅ Región lista para bracket</span>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {readiness.duplicateGroups > 0 && (
+        <div className="bg-[var(--color-surface)] border border-red-500/50 rounded-xl p-6 mb-8 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-heading font-bold text-red-400 mb-1">⚠️ Alertas de Colisión de Selecciones</h3>
+            <p className="text-[var(--color-muted)] text-sm">Existen clasificados con selecciones duplicadas. Deben resolverse antes del sorteo regional.</p>
+          </div>
+          <button 
+            onClick={() => navigate(`/regional/${region.id}/resolucion`)}
+            className="px-6 py-3 bg-[var(--color-primary)] hover:bg-opacity-80 rounded text-sm font-bold transition-colors"
+          >
+            Resolver duplicados
+          </button>
+        </div>
+      )}
 
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
         <div className="p-4 border-b border-[var(--color-border)] bg-black/20 flex justify-between items-center">
