@@ -1,11 +1,13 @@
 import { Link, Outlet } from 'react-router-dom';
 import { clearAccessSession, getAccessSession } from '../lib/accessSession';
+import SupabaseCloudSync from './SupabaseCloudSync';
 
 export default function Layout() {
   const profile = getAccessSession();
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] font-sans">
+      <SupabaseCloudSync />
       <header className="border-b border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-4 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-4">
           <img src="/icono oficial/Recurso 6.png" alt="Instituto Potosino de la Juventud" className="h-10" />
