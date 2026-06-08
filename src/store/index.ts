@@ -494,6 +494,7 @@ export const useTournamentStore = create<TournamentState>()(
         if (!qp) throw new Error("Jugador clasificado no encontrado.");
         if (!qp.is_active) throw new Error("El jugador clasificado no está activo.");
         if (!qp.region_id) throw new Error("El jugador no tiene región asignada.");
+        if (!newTeamId) throw new Error("El newTeamId es requerido.");
         if (qp.team_id === newTeamId) throw new Error("La nueva selección no puede ser igual a la anterior.");
         
         const availableTeams = get().getAvailableTeamsForRegion(qp.region_id);
