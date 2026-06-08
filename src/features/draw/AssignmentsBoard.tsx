@@ -84,7 +84,7 @@ export default function AssignmentsBoard() {
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-[var(--color-border)] bg-[#252a33]">
+            <tr className="border-b border-[var(--color-border)] bg-[#142e1d]">
               <th className="p-4 text-sm font-mono text-[var(--color-muted)]">Turno</th>
               <th className="p-4 text-sm font-mono text-[var(--color-muted)]">Participante</th>
               <th className="p-4 text-sm font-mono text-[var(--color-muted)]">Selección</th>
@@ -97,17 +97,17 @@ export default function AssignmentsBoard() {
               const team = assignment ? teams.find(t => t.id === assignment.team_id) : null;
               
               return (
-                <tr key={participant.id} className="border-b border-[var(--color-border)] hover:bg-[#252a33] transition-colors">
+                <tr key={participant.id} className="border-b border-[var(--color-border)] hover:bg-[#142e1d] transition-colors">
                   <td className="p-4 text-[var(--color-muted)] font-mono">{participant.turn_order || index + 1}</td>
                   <td className="p-4 font-medium">{participant.display_name}</td>
-                  <td className="p-4 text-[var(--color-accent)] font-bold">{team ? team.name : '—'}</td>
+                  <td className="p-4 text-[var(--color-primary)] font-bold">{team ? team.name : '—'}</td>
                   <td className="p-4">
                     {team ? (
                       <span className="inline-flex items-center px-2 py-1 rounded-[6px] text-xs font-medium bg-[var(--color-success)] text-white">
                         Asignado
                       </span>
                     ) : (
-                      <span className="inline-flex items-center px-2 py-1 rounded-[6px] text-xs font-medium bg-[#3f4959] text-[var(--color-text)]">
+                      <span className="inline-flex items-center px-2 py-1 rounded-[6px] text-xs font-medium bg-[#1b4028] text-[var(--color-text)]">
                         Pendiente
                       </span>
                     )}

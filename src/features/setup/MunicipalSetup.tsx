@@ -45,7 +45,7 @@ export default function MunicipalSetup() {
             <div className="col-span-2">
               <div className="text-sm text-[var(--color-muted)] font-mono mb-1">Estado de Sesión</div>
               <div className="font-bold">
-                <span className={`inline-flex items-center px-2 py-1 rounded-[6px] text-xs font-medium ${isCompleted ? 'bg-[var(--color-success)] text-white' : sessionExists ? 'bg-[var(--color-primary)] text-[var(--color-primary-content)]' : 'bg-[#3f4959] text-[var(--color-text)]'}`}>
+                <span className={`inline-flex items-center px-2 py-1 rounded-[6px] text-xs font-medium ${isCompleted ? 'bg-[var(--color-success)] text-white' : sessionExists ? 'bg-[var(--color-primary)] text-[var(--color-primary-content)]' : 'bg-[#1b4028] text-[var(--color-text)]'}`}>
                   {isCompleted ? 'Eliminatoria municipal cerrada' : sessionStatus}
                 </span>
               </div>
@@ -57,16 +57,16 @@ export default function MunicipalSetup() {
           <div className="border-t border-[var(--color-border)] pt-6 mb-6">
             <h3 className="text-lg font-heading font-bold text-[var(--color-success)] mb-4">Clasificados Regionales</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-[#1a1d24] p-4 rounded-lg border border-[var(--color-border)]">
+              <div className="bg-[var(--color-surface)] p-4 rounded-lg border border-[var(--color-border)]">
                 <div className="text-xs text-[var(--color-muted)] font-mono uppercase mb-1">Campeón Municipal</div>
                 <div className="font-bold text-lg text-white">{champion.display_name}</div>
-                <div className="text-[var(--color-accent)] font-medium text-sm">{getParticipantTeam(champion.id)?.name}</div>
+                <div className="text-[var(--color-primary)] font-medium text-sm">{getParticipantTeam(champion.id)?.name}</div>
               </div>
               {runnerUp && (
-                <div className="bg-[#1a1d24] p-4 rounded-lg border border-[var(--color-border)]">
+                <div className="bg-[var(--color-surface)] p-4 rounded-lg border border-[var(--color-border)]">
                   <div className="text-xs text-[var(--color-muted)] font-mono uppercase mb-1">Subcampeón Municipal</div>
                   <div className="font-bold text-lg text-white">{runnerUp.display_name}</div>
-                  <div className="text-[var(--color-accent)] font-medium text-sm">{getParticipantTeam(runnerUp.id)?.name}</div>
+                  <div className="text-[var(--color-primary)] font-medium text-sm">{getParticipantTeam(runnerUp.id)?.name}</div>
                 </div>
               )}
             </div>

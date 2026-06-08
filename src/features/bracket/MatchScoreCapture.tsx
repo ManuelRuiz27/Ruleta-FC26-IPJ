@@ -64,10 +64,10 @@ export default function MatchScoreCapture() {
   if (match.status === 'completed' && isBye) {
     return (
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6 text-center">
-        <h2 className="text-2xl font-heading font-bold mb-4 text-[var(--color-accent)]">Avance automático por BYE</h2>
-        <div className="bg-[#1a1d24] p-6 rounded-lg mb-6 border border-[var(--color-border)] inline-block">
+        <h2 className="text-2xl font-heading font-bold mb-4 text-[var(--color-primary)]">Avance automático por BYE</h2>
+        <div className="bg-[var(--color-surface)] p-6 rounded-lg mb-6 border border-[var(--color-border)] inline-block">
           <div className="text-xl font-bold text-white mb-2">{pA.display_name}</div>
-          <div className="text-[var(--color-accent)] font-medium">{tA?.name}</div>
+          <div className="text-[var(--color-primary)] font-medium">{tA?.name}</div>
         </div>
         <div>
           <button 
@@ -102,17 +102,17 @@ export default function MatchScoreCapture() {
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6">
         <h2 className="text-2xl font-heading font-bold mb-4">Resultado de Partido</h2>
         
-        <div className="grid grid-cols-3 gap-4 items-center mb-6 bg-[#1a1d24] p-4 rounded-lg">
+        <div className="grid grid-cols-3 gap-4 items-center mb-6 bg-[var(--color-surface)] p-4 rounded-lg">
           <div className="text-center">
             <div className="font-medium">{pA.display_name}</div>
-            <div className="text-[var(--color-accent)] font-bold text-sm">{tA?.name}</div>
+            <div className="text-[var(--color-primary)] font-bold text-sm">{tA?.name}</div>
             <div className="text-3xl font-bold mt-2">{match.regular_score_a}</div>
             {match.penalties_played && <div className="text-[var(--color-muted)] text-sm">Pen: {match.penalties_score_a}</div>}
           </div>
           <div className="text-center font-bold text-[var(--color-muted)]">VS</div>
           <div className="text-center">
             <div className="font-medium">{pB.display_name}</div>
-            <div className="text-[var(--color-accent)] font-bold text-sm">{tB?.name}</div>
+            <div className="text-[var(--color-primary)] font-bold text-sm">{tB?.name}</div>
             <div className="text-3xl font-bold mt-2">{match.regular_score_b}</div>
             {match.penalties_played && <div className="text-[var(--color-muted)] text-sm">Pen: {match.penalties_score_b}</div>}
           </div>
@@ -206,10 +206,10 @@ export default function MatchScoreCapture() {
       <h2 className="text-2xl font-heading font-bold mb-6">Capturar Marcador</h2>
       
       <form onSubmit={handleSubmit} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6">
-        <div className="flex justify-between items-center bg-[#1a1d24] p-4 rounded-lg mb-6 border border-[var(--color-border)]">
+        <div className="flex justify-between items-center bg-[var(--color-surface)] p-4 rounded-lg mb-6 border border-[var(--color-border)]">
           <div className="flex-1 text-center">
             <div className="font-bold text-lg">{pA.display_name}</div>
-            <div className="text-[var(--color-accent)] font-medium mb-3">{tA?.name}</div>
+            <div className="text-[var(--color-primary)] font-medium mb-3">{tA?.name}</div>
             <input 
               type="number" 
               min="0"
@@ -221,7 +221,7 @@ export default function MatchScoreCapture() {
           <div className="text-xl font-bold text-[var(--color-muted)] px-4">VS</div>
           <div className="flex-1 text-center">
             <div className="font-bold text-lg">{pB.display_name}</div>
-            <div className="text-[var(--color-accent)] font-medium mb-3">{tB?.name}</div>
+            <div className="text-[var(--color-primary)] font-medium mb-3">{tB?.name}</div>
             <input 
               type="number" 
               min="0"
@@ -233,7 +233,7 @@ export default function MatchScoreCapture() {
         </div>
 
         {scoreA !== '' && scoreB !== '' && scoreA === scoreB && (
-          <div className="mb-6 space-y-4 p-4 border border-[var(--color-primary)] border-opacity-50 rounded-lg bg-[rgba(102,58,243,0.05)]">
+          <div className="mb-6 space-y-4 p-4 border border-[var(--color-primary)] border-opacity-50 rounded-lg bg-[rgba(139,197,63,0.05)]">
             <h4 className="font-bold text-[var(--color-primary)]">Opciones de Empate</h4>
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={extraTime} onChange={e => setExtraTime(e.target.checked)} className="rounded" />
@@ -257,11 +257,11 @@ export default function MatchScoreCapture() {
                   <div className="mt-4">
                     <p className="text-sm text-[var(--color-muted)] mb-2">Selecciona quién ganó en tiempos extra:</p>
                     <div className="flex gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer bg-[#1a1d24] p-2 rounded flex-1 border border-[var(--color-border)] hover:border-[var(--color-primary)]">
+                      <label className="flex items-center gap-2 cursor-pointer bg-[var(--color-surface)] p-2 rounded flex-1 border border-[var(--color-border)] hover:border-[var(--color-primary)]">
                         <input type="radio" name="winner" value={pA.id} checked={manualWinnerId === pA.id} onChange={() => setManualWinnerId(pA.id)} />
                         <span>{pA.display_name}</span>
                       </label>
-                      <label className="flex items-center gap-2 cursor-pointer bg-[#1a1d24] p-2 rounded flex-1 border border-[var(--color-border)] hover:border-[var(--color-primary)]">
+                      <label className="flex items-center gap-2 cursor-pointer bg-[var(--color-surface)] p-2 rounded flex-1 border border-[var(--color-border)] hover:border-[var(--color-primary)]">
                         <input type="radio" name="winner" value={pB.id} checked={manualWinnerId === pB.id} onChange={() => setManualWinnerId(pB.id)} />
                         <span>{pB.display_name}</span>
                       </label>
@@ -283,13 +283,13 @@ export default function MatchScoreCapture() {
           <button 
             type="button"
             onClick={() => navigate(backUrl)}
-            className="flex-1 bg-transparent border border-[var(--color-border)] text-[var(--color-text)] py-3 rounded-[2px] font-bold hover:bg-[#3f4959] transition-colors"
+            className="flex-1 bg-transparent border border-[var(--color-border)] text-[var(--color-text)] py-3 rounded-[2px] font-bold hover:bg-[#1b4028] transition-colors"
           >
             Cancelar
           </button>
           <button 
             type="submit"
-            className="flex-1 bg-[var(--color-primary)] text-[var(--color-primary-content)] py-3 rounded-[2px] font-bold shadow-[0_0_15px_rgba(102,58,243,0.3)] hover:bg-opacity-90 transition-opacity"
+            className="flex-1 bg-[var(--color-primary)] text-[var(--color-primary-content)] py-3 rounded-[2px] font-bold shadow-[0_0_15px_rgba(139,197,63,0.3)] hover:bg-opacity-90 transition-opacity"
           >
             Guardar resultado
           </button>

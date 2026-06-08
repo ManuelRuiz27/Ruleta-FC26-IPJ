@@ -11,9 +11,9 @@ export default function Layout() {
           </h1>
         </div>
         <nav className="space-x-4">
-          <Link to="/estatal/dashboard" className="text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-colors">Estatal</Link>
+          <Link to="/estatal/dashboard" className="text-[var(--color-muted)] hover:text-[var(--color-primary)] transition-colors">Estatal</Link>
           {/* Link temporal para pruebas */}
-          <Link to="/municipal/mun-1" className="text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-colors">Municipal (Demo)</Link>
+          <Link to="/municipal/mun-1" className="text-[var(--color-muted)] hover:text-[var(--color-primary)] transition-colors">Municipal (Demo)</Link>
         </nav>
       </header>
       
@@ -24,11 +24,11 @@ export default function Layout() {
             <li>
               <div className="text-xs uppercase tracking-wider text-[var(--color-muted)] font-mono mb-2">Menú Operador</div>
             </li>
-            <li><Link to="/municipal/mun-1" className="block text-sm hover:text-[var(--color-accent)]">Mi municipio</Link></li>
-            <li><Link to="/municipal/mun-1/registro" className="block text-sm hover:text-[var(--color-accent)]">Registro</Link></li>
-            <li><Link to="/municipal/mun-1/ruleta" className="block text-sm hover:text-[var(--color-accent)]">Sorteo / Ruleta</Link></li>
-            <li><Link to="/municipal/mun-1/asignaciones" className="block text-sm hover:text-[var(--color-accent)]">Asignaciones</Link></li>
-            <li><Link to="/municipal/mun-1/bracket" className="block text-sm hover:text-[var(--color-accent)]">Bracket</Link></li>
+            <li><Link to="/municipal/mun-1" className="block text-sm hover:text-[var(--color-primary)]">Mi municipio</Link></li>
+            <li><Link to="/municipal/mun-1/registro" className="block text-sm hover:text-[var(--color-primary)]">Registro</Link></li>
+            <li><Link to="/municipal/mun-1/ruleta" className="block text-sm hover:text-[var(--color-primary)]">Sorteo / Ruleta</Link></li>
+            <li><Link to="/municipal/mun-1/asignaciones" className="block text-sm hover:text-[var(--color-primary)]">Asignaciones</Link></li>
+            <li><Link to="/municipal/mun-1/bracket" className="block text-sm hover:text-[var(--color-primary)]">Bracket</Link></li>
           </ul>
         </aside>
 

@@ -4,6 +4,7 @@ import { initialRegions } from '../../data/regions';
 import { initialMunicipalities } from '../../data/municipalities';
 import ExportPanel from '../exports/ExportPanel';
 import { exportToCSV, exportToJSON } from '../../lib/utils/exportUtils';
+import { seedAllMunicipalities } from '../../lib/utils/seed';
 
 export default function EstatalDashboard() {
   const navigate = useNavigate();
@@ -45,7 +46,32 @@ export default function EstatalDashboard() {
 
   return (
     <div className="max-w-6xl mx-auto p-6">
-      <h2 className="text-2xl font-heading font-bold mb-6">Dashboard Estatal</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-heading font-bold">Dashboard Estatal</h2>
+        <div className="flex gap-3">
+          <button 
+            onClick={async () => {
+              if (confirm('¿Simular sorteo y bracket para los 25 municipios operativos? (Dev Mode)')) {
+                await seedAllMunicipalities();
+              }
+            }}
+            className="text-xs font-mono bg-[#1a1d24] text-[var(--color-primary)] border border-[var(--color-primary)] px-3 py-1 rounded hover:bg-opacity-80"
+          >
+            🛠 Sembrar 25 Muns
+          </button>
+          <button 
+            onClick={() => {
+              if (confirm('¿Borrar TODOS los datos locales del torneo?')) {
+                useTournamentStore.getState().clearLocalTournamentState();
+                window.location.reload();
+              }
+            }}
+            className="text-xs font-mono bg-[#1a1d24] text-red-400 border border-red-400 px-3 py-1 rounded hover:bg-opacity-80"
+          >
+            🗑 Reset BD
+          </button>
+        </div>
+      </div>
       
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4">
@@ -69,7 +95,7 @@ export default function EstatalDashboard() {
       </div>
 
       {stateReadiness.completedRegions === stateReadiness.totalRegions && (
-        <div className="bg-[#1a1d24] border border-[var(--color-primary)] rounded-xl p-6 mb-8 flex items-center justify-between">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-primary)] rounded-xl p-6 mb-8 flex items-center justify-between">
           <div>
             <h3 className="text-xl font-bold text-white mb-2">Fase Regional Completada</h3>
             <p className="text-[var(--color-muted)]">

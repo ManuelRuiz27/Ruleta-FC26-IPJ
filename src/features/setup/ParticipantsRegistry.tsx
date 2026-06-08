@@ -47,7 +47,7 @@ export default function ParticipantsRegistry() {
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6">
         <div className="flex justify-between items-end mb-4">
           <p className="text-[var(--color-muted)] text-sm">Pega los nombres de los jugadores (uno por línea).</p>
-          <div className="text-sm font-mono font-bold text-[var(--color-accent)] bg-[#252a33] px-3 py-1 rounded-[6px]">
+          <div className="text-sm font-mono font-bold text-[var(--color-primary)] bg-[#142e1d] px-3 py-1 rounded-[6px]">
             {names.length} / 32 participantes
           </div>
         </div>

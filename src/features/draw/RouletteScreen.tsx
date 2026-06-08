@@ -131,7 +131,7 @@ export default function RouletteScreen() {
                 setErrorMsg(err.message || 'Error al preparar sesión.');
               }
             }}
-            className="bg-transparent border border-[var(--color-primary)] text-[var(--color-primary)] px-8 py-3 rounded-[2px] font-bold text-lg hover:bg-[rgba(102,58,243,0.1)] transition-colors"
+            className="bg-transparent border border-[var(--color-primary)] text-[var(--color-primary)] px-8 py-3 rounded-[2px] font-bold text-lg hover:bg-[rgba(139,197,63,0.1)] transition-colors"
           >
             Preparar sorteo
           </button>
@@ -184,10 +184,10 @@ export default function RouletteScreen() {
         <p className="text-[var(--color-muted)] mb-12">Todos los participantes tienen una selección asignada.</p>
         
         {lastAssignedTeam && lastAssignedParticipant && (
-          <div className="mb-12 bg-[#252a33] p-6 rounded-xl border border-[var(--color-border)] text-center animate-fade-in">
+          <div className="mb-12 bg-[#142e1d] p-6 rounded-xl border border-[var(--color-border)] text-center animate-fade-in">
              <div className="text-sm text-[var(--color-muted)] font-mono mb-2">Última asignación</div>
              <div className="text-xl font-bold">{lastAssignedParticipant.display_name}</div>
-             <div className="text-[var(--color-accent)] font-bold text-2xl mt-2">{lastAssignedTeam.name}</div>
+             <div className="text-[var(--color-primary)] font-bold text-2xl mt-2">{lastAssignedTeam.name}</div>
           </div>
         )}
 
@@ -195,13 +195,13 @@ export default function RouletteScreen() {
           <div className="flex gap-4">
             <button 
               onClick={() => navigate(`/municipal/${id}/asignaciones`)}
-              className="bg-transparent border border-[var(--color-border)] text-[var(--color-text)] px-6 py-2 rounded-[2px] font-medium hover:bg-[#3f4959] transition-colors"
+              className="bg-transparent border border-[var(--color-border)] text-[var(--color-text)] px-6 py-2 rounded-[2px] font-medium hover:bg-[#1b4028] transition-colors"
             >
               Ver Asignaciones
             </button>
             <button 
               onClick={() => navigate(`/municipal/${id}/bracket`)}
-              className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-6 py-2 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity shadow-[0_0_15px_rgba(102,58,243,0.3)]"
+              className="bg-[var(--color-primary)] text-[var(--color-primary-content)] px-6 py-2 rounded-[2px] font-medium hover:bg-opacity-90 transition-opacity shadow-[0_0_15px_rgba(139,197,63,0.3)]"
             >
               Ir a bracket municipal
             </button>
@@ -294,7 +294,7 @@ export default function RouletteScreen() {
       <h2 className="text-3xl font-heading font-bold mb-2">Mundial FC 26</h2>
       <p className="text-[var(--color-muted)] mb-8">Sorteo de Selecciones - {currentSession.name}</p>
       
-      <div className="text-sm text-[var(--color-accent)] font-mono font-bold mb-6 bg-[#252a33] px-4 py-1 rounded-[6px] border border-[var(--color-border)]">
+      <div className="text-sm text-[var(--color-primary)] font-mono font-bold mb-6 bg-[#142e1d] px-4 py-1 rounded-[6px] border border-[var(--color-border)]">
         Turno {currentTurn} / {totalParticipants}
       </div>
       
@@ -314,8 +314,8 @@ export default function RouletteScreen() {
             }
           }}
           style={{ 
-            background: 'conic-gradient(from 0deg, var(--color-surface) 0%, #1a1d24 50%, var(--color-surface) 100%)',
-            boxShadow: '0 0 40px rgba(102,58,243,0.1)'
+            background: 'conic-gradient(from 0deg, var(--color-surface) 0%, #0a170f 50%, var(--color-surface) 100%)',
+            boxShadow: '0 0 40px rgba(139,197,63,0.1)'
           }}
         >
           {/* Decorative segments inside the roulette */}
@@ -344,7 +344,7 @@ export default function RouletteScreen() {
         <div className="absolute -top-4 w-0 h-0 border-l-[12px] border-r-[12px] border-t-[20px] border-transparent border-t-[var(--color-primary)] z-10" />
 
         {/* Center hub */}
-        <div className="w-48 h-48 bg-[#05060f] rounded-full z-10 border-[4px] border-[var(--color-primary)] shadow-[0_0_20px_rgba(102,58,243,0.4)] flex flex-col items-center justify-center p-4">
+        <div className="w-48 h-48 bg-[#05060f] rounded-full z-10 border-[4px] border-[var(--color-primary)] shadow-[0_0_20px_rgba(139,197,63,0.4)] flex flex-col items-center justify-center p-4">
           <div className="text-xs text-[var(--color-muted)] font-mono mb-1 uppercase tracking-wider">Participante</div>
           <div className="text-lg font-bold text-center leading-tight">
             {currentParticipant ? currentParticipant.display_name : 'Completado'}
@@ -364,7 +364,7 @@ export default function RouletteScreen() {
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="mb-8 bg-[#252a33] p-6 rounded-xl border border-[var(--color-success)] text-center shadow-[0_0_30px_rgba(38,150,132,0.3)] min-w-[320px]"
+            className="mb-8 bg-[#142e1d] p-6 rounded-xl border border-[var(--color-success)] text-center shadow-[0_0_30px_rgba(38,150,132,0.3)] min-w-[320px]"
           >
             <div className="text-[var(--color-muted)] text-sm uppercase tracking-widest mb-2">Selección Asignada</div>
             <div className="text-[var(--color-text)] mb-4">
@@ -388,9 +388,9 @@ export default function RouletteScreen() {
       <button 
         onClick={handleSpin}
         disabled={isSpinning || !currentParticipant}
-        className={`px-10 py-4 rounded-[2px] font-bold text-xl shadow-[0_0_15px_rgba(102,58,243,0.3)] transition-all ${
+        className={`px-10 py-4 rounded-[2px] font-bold text-xl shadow-[0_0_15px_rgba(139,197,63,0.3)] transition-all ${
           isSpinning || !currentParticipant
-            ? 'bg-[#3f4959] text-[var(--color-muted)] cursor-not-allowed shadow-none border border-[var(--color-border)]'
+            ? 'bg-[#1b4028] text-[var(--color-muted)] cursor-not-allowed shadow-none border border-[var(--color-border)]'
             : 'bg-[var(--color-primary)] text-[var(--color-primary-content)] hover:bg-opacity-90 hover:scale-105'
         }`}
       >
