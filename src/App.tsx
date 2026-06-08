@@ -23,6 +23,7 @@ function App() {
           <Route path="/regional/:regionId" element={<RegionalDashboard />} />
           <Route path="/regional/:regionId/resolucion" element={<RegionalResolution />} />
           <Route path="/regional/:regionId/bracket" element={<RegionalBracket />} />
+          <Route path="/regional/:regionId/partido/:matchId" element={<MatchScoreCapture />} />
           
           <Route path="/municipal/:id" element={<MunicipalSetup />} />
           <Route path="/municipal/:id/registro" element={<ParticipantsRegistry />} />

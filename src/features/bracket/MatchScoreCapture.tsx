@@ -3,8 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTournamentStore } from '../../store';
 
 export default function MatchScoreCapture() {
-  const { id, matchId } = useParams<{ id: string, matchId: string }>();
+  const { id, regionId, matchId } = useParams<{ id?: string, regionId?: string, matchId: string }>();
   const navigate = useNavigate();
+  
+  const backUrl = regionId ? `/regional/${regionId}/bracket` : `/municipal/${id}/bracket`;
   
   const getMatchById = useTournamentStore(state => state.getMatchById);
   const participants = useTournamentStore(state => state.participants);
@@ -27,7 +29,7 @@ export default function MatchScoreCapture() {
       <div className="bg-[var(--color-surface)] border border-[var(--color-danger)] rounded-xl p-6">
         <h2 className="text-xl font-heading font-bold text-[var(--color-danger)] mb-2">Partido no encontrado</h2>
         <button 
-          onClick={() => navigate(`/municipal/${id}/bracket`)}
+          onClick={() => navigate(backUrl)}
           className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-[2px] font-medium mt-4"
         >
           Volver al Bracket
@@ -47,7 +49,7 @@ export default function MatchScoreCapture() {
         <h2 className="text-xl font-heading font-bold mb-2">Partido no listo</h2>
         <p className="text-[var(--color-muted)] mb-4">Aún falta definir a los jugadores para este partido.</p>
         <button 
-          onClick={() => navigate(`/municipal/${id}/bracket`)}
+          onClick={() => navigate(backUrl)}
           className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-[2px] font-medium"
         >
           Volver al Bracket
@@ -68,7 +70,7 @@ export default function MatchScoreCapture() {
         </div>
         <div>
           <button 
-            onClick={() => navigate(`/municipal/${id}/bracket`)}
+            onClick={() => navigate(backUrl)}
             className="w-full bg-[var(--color-primary)] text-white px-4 py-2 rounded-[2px] font-medium"
           >
             Volver al Bracket
@@ -84,7 +86,7 @@ export default function MatchScoreCapture() {
         <h2 className="text-xl font-heading font-bold mb-2 text-[var(--color-primary)]">Partido pendiente de rival</h2>
         <p className="text-[var(--color-muted)] mb-6">Aún falta que se resuelvan los partidos anteriores para conocer a ambos contrincantes.</p>
         <button 
-          onClick={() => navigate(`/municipal/${id}/bracket`)}
+          onClick={() => navigate(backUrl)}
           className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-[2px] font-medium"
         >
           Volver al Bracket
@@ -121,7 +123,7 @@ export default function MatchScoreCapture() {
         </div>
 
         <button 
-          onClick={() => navigate(`/municipal/${id}/bracket`)}
+          onClick={() => navigate(backUrl)}
           className="w-full bg-[var(--color-primary)] text-white px-4 py-2 rounded-[2px] font-medium"
         >
           Volver al Bracket
@@ -135,7 +137,7 @@ export default function MatchScoreCapture() {
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6">
         <h2 className="text-xl font-heading font-bold mb-2">Error</h2>
         <p className="text-[var(--color-muted)] mb-4">Faltan datos del rival.</p>
-        <button onClick={() => navigate(`/municipal/${id}/bracket`)} className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-[2px] font-medium">Volver</button>
+        <button onClick={() => navigate(backUrl)} className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-[2px] font-medium">Volver</button>
       </div>
     );
   }
@@ -192,7 +194,7 @@ export default function MatchScoreCapture() {
         penaltiesScoreB: penalties ? Number(penScoreB) : null,
         winnerId
       });
-      navigate(`/municipal/${id}/bracket`);
+      navigate(backUrl);
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al guardar el marcador');
     }
@@ -279,7 +281,7 @@ export default function MatchScoreCapture() {
         <div className="flex gap-4 mt-8">
           <button 
             type="button"
-            onClick={() => navigate(`/municipal/${id}/bracket`)}
+            onClick={() => navigate(backUrl)}
             className="flex-1 bg-transparent border border-[var(--color-border)] text-[var(--color-text)] py-3 rounded-[2px] font-bold hover:bg-[#3f4959] transition-colors"
           >
             Cancelar

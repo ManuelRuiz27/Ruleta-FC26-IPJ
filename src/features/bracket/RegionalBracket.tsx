@@ -15,6 +15,8 @@ export default function RegionalBracket() {
 
   const createRegionalSession = useTournamentStore(state => state.createRegionalSession);
   const generateRegionalBracket = useTournamentStore(state => state.generateRegionalBracket);
+  const createCompletedRegionalResult = useTournamentStore(state => state.createCompletedRegionalResult);
+  const clearLocalTournamentState = useTournamentStore(state => state.clearLocalTournamentState);
 
   if (!regionId) return null;
 
@@ -53,6 +55,19 @@ export default function RegionalBracket() {
       alert(e.message);
     }
   };
+
+  const handleCloseRegional = () => {
+    try {
+      createCompletedRegionalResult();
+      clearLocalTournamentState();
+      navigate(`/regional/${regionId}`);
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
+
+  const finalMatch = matches.find(m => m.round === 'final');
+  const isFinalCompleted = finalMatch?.status === 'completed';
 
   const matchesByRound = matches.reduce((acc, match) => {
     const list = acc[match.round] || [];
@@ -98,6 +113,15 @@ export default function RegionalBracket() {
 
       {isCurrentSessionRegional && bracket && (
         <>
+          {isFinalCompleted && currentSession?.status === 'bracket_ready' && (
+            <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-8 text-center mb-8">
+              <h3 className="text-2xl font-bold text-green-400 mb-4">Torneo Regional Finalizado</h3>
+              <p className="text-[var(--color-muted)] mb-6">El campeón y subcampeón han sido definidos. Puedes cerrar esta fase.</p>
+              <button onClick={handleCloseRegional} className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white rounded-lg font-bold transition-colors">
+                Cerrar Torneo Regional
+              </button>
+            </div>
+          )}
           <div className="grid grid-cols-4 gap-4 mb-8">
             <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-4 text-center">
               <div className="text-xs text-[var(--color-muted)] uppercase mb-1">Clasificados</div>
@@ -142,7 +166,7 @@ export default function RegionalBracket() {
                           )}
                         </div>
                         
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between mt-4">
                           <div className="flex items-center gap-2">
                             {teamB && teamB.flag_asset_url ? (
                               <img src={teamB.flag_asset_url} alt="flag" className="w-5 h-4 object-cover rounded-sm" />
@@ -154,6 +178,17 @@ export default function RegionalBracket() {
                             </span>
                           </div>
                         </div>
+
+                        {match.status === 'ready' && match.player_a_id && match.player_b_id && (
+                          <div className="mt-4 pt-4 border-t border-[var(--color-border)]">
+                            <button 
+                              onClick={() => navigate(`/regional/${regionId}/partido/${match.id}`)}
+                              className="w-full py-2 bg-[var(--color-primary)] hover:bg-opacity-80 text-white text-sm font-bold rounded transition-colors"
+                            >
+                              Capturar Marcador
+                            </button>
+                          </div>
+                        )}
                       </div>
                     );
                   })}

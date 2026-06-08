@@ -198,3 +198,36 @@ export interface CompletedMunicipalResult {
   final_penalties_score_runner_up: number | null;
   final_decision_method: "regular" | "extra_time" | "penalties" | "bye" | "unknown";
 }
+
+export interface CompletedRegionalResult {
+  id: string;
+  source_session_id: string;
+
+  region_id: string;
+  region_name: string;
+
+  completed_at: string;
+
+  participant_count: number;
+  bracket_size: number;
+  bye_count: number;
+
+  champion_participant_id: string;
+  champion_name: string;
+  champion_team_id: string;
+  champion_team_name: string;
+
+  runner_up_participant_id: string;
+  runner_up_name: string;
+  runner_up_team_id: string;
+  runner_up_team_name: string;
+
+  final_match_id: string | null;
+  final_regular_score_champion: number | null;
+  final_regular_score_runner_up: number | null;
+  final_extra_time_played: boolean;
+  final_penalties_played: boolean;
+  final_penalties_score_champion: number | null;
+  final_penalties_score_runner_up: number | null;
+  final_decision_method: "regular" | "extra_time" | "penalties" | "bye" | "unknown";
+}
